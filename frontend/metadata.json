@@ -1,0 +1,5 @@
+{
+  "name": "Hunar Bazaar - Skill Exchange Platform",
+  "description": "A complete, responsive UI for Hunar Bazaar, a modern skill-exchange platform. It includes a landing page, multi-step signup, login, verification, user home, and a dashboard, all built with a clean, friendly, and mobile-first design.",
+  "requestFramePermissions": []
+}
