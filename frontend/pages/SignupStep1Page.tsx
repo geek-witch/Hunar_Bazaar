@@ -104,16 +104,21 @@ const SignupStep1Page: React.FC<{ navigation: Navigation }> = ({ navigation }) =
         password: formData.password,
       });
 
-      if (response.success && response.data && response.data.userId) {
-        // Store userId for step 2
-        localStorage.setItem('signupUserId', response.data.userId);
-        localStorage.setItem('signupEmail', formData.email);
-        localStorage.setItem('signupData', JSON.stringify({
-          firstName: formData.firstName,
-          lastName: formData.lastName,
-          dob: formData.dob,
-        }));
-        navigation.navigateTo(Page.Signup2);
+      if (response.success && response.data) {
+        const data = response.data as { userId: string; email?: string; name?: string };
+        if (data.userId) {
+          // Store userId for step 2
+          localStorage.setItem('signupUserId', data.userId);
+          localStorage.setItem('signupEmail', formData.email);
+          localStorage.setItem('signupData', JSON.stringify({
+            firstName: formData.firstName,
+            lastName: formData.lastName,
+            dob: formData.dob,
+          }));
+          navigation.navigateTo(Page.Signup2);
+        } else {
+          setGeneralError('User ID not received. Please try again.');
+        }
       } else {
         setGeneralError(response.message || 'Signup failed. Please try again.');
       }

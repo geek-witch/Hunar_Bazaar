@@ -51,9 +51,14 @@ const LoginPage: React.FC<{ navigation: Navigation }> = ({ navigation }) => {
       });
 
       if (response.success && response.data) {
-        // Store token
-        localStorage.setItem('token', response.data.token);
-        navigation.login();
+        const data = response.data as { token: string; user?: any };
+        if (data.token) {
+          // Store token
+          localStorage.setItem('token', data.token);
+          navigation.login();
+        } else {
+          setGeneralError('Token not received. Please try again.');
+        }
       } else {
         setGeneralError(response.message || 'Login failed. Please check your credentials.');
       }

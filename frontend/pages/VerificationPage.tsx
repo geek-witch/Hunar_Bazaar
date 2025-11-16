@@ -54,11 +54,16 @@ const VerificationPage: React.FC<{ navigation: Navigation }> = ({ navigation }) 
 
       if (response.success && response.data) {
         // Store token and clear signup data
-        localStorage.setItem('token', response.data.token);
-        localStorage.removeItem('signupUserId');
-        localStorage.removeItem('signupEmail');
-        localStorage.removeItem('signupData');
-        navigation.login();
+        const data = response.data as { token: string; user?: any };
+        if (data.token) {
+          localStorage.setItem('token', data.token);
+          localStorage.removeItem('signupUserId');
+          localStorage.removeItem('signupEmail');
+          localStorage.removeItem('signupData');
+          navigation.login();
+        } else {
+          setError('Token not received. Please try again.');
+        }
       } else {
         setError(response.message || 'Invalid OTP. Please try again.');
       }
@@ -102,7 +107,7 @@ const VerificationPage: React.FC<{ navigation: Navigation }> = ({ navigation }) 
             Verify Your Account
           </h2>
           <p className="mt-2 text-sm text-gray-600">
-            We've sent a 6-digit PIN to your email. (Hint: any 6 digits will work)
+            We've sent a 6-digit PIN to your email.
           </p>
         </div>
         <form className="mt-8 space-y-6" onSubmit={handleSubmit}>

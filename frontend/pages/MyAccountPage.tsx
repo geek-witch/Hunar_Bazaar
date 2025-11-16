@@ -90,18 +90,31 @@ const MyAccountPage: React.FC<{ navigation: Navigation }> = ({ navigation }) => 
             try {
                 const response = await authApi.getProfile();
                 if (response.success && response.data) {
+                    const data = response.data as {
+                        name: string;
+                        email: string;
+                        dob: string;
+                        about: string;
+                        availability: string;
+                        teachSkills: string[];
+                        learnSkills: string[];
+                        credits: number;
+                        badges: number;
+                        profilePicUrl: string | null;
+                        socialLinks: string[];
+                    };
                     setUserData({
-                        name: response.data.name,
-                        email: response.data.email,
-                        dob: response.data.dob,
-                        about: response.data.about,
-                        availability: response.data.availability,
-                        teachSkills: response.data.teachSkills,
-                        learnSkills: response.data.learnSkills,
-                        credits: response.data.credits,
-                        badges: response.data.badges,
-                        profilePicUrl: response.data.profilePicUrl || '/asset/p4.jpg',
-                        socialLinks: response.data.socialLinks || [],
+                        name: data.name,
+                        email: data.email,
+                        dob: data.dob,
+                        about: data.about,
+                        availability: data.availability,
+                        teachSkills: data.teachSkills,
+                        learnSkills: data.learnSkills,
+                        credits: data.credits,
+                        badges: data.badges,
+                        profilePicUrl: data.profilePicUrl || '/asset/p4.jpg',
+                        socialLinks: data.socialLinks || [],
                     });
                 } else {
                     setError(response.message || 'Failed to load profile');

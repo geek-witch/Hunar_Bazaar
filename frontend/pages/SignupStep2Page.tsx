@@ -180,7 +180,27 @@ const SignupStep2Page: React.FC<{ navigation: Navigation }> = ({ navigation }) =
   
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     if (e.target.files && e.target.files[0]) {
-      setProfilePic(e.target.files[0]);
+      const file = e.target.files[0];
+      const maxSize = 10 * 1024 * 1024; 
+      
+      if (file.size > maxSize) {
+        setErrors(prev => ({ ...prev, profilePic: 'File size exceeds 10MB limit. Please choose a smaller image.' }));
+        setProfilePic(null);
+        e.target.value = '';
+        return;
+      }
+      
+      const validTypes = ['image/png', 'image/jpeg', 'image/jpg', 'image/gif'];
+      if (!validTypes.includes(file.type)) {
+        setErrors(prev => ({ ...prev, profilePic: 'Invalid file type. Please upload PNG, JPG, or GIF only.' }));
+        setProfilePic(null);
+        e.target.value = '';
+        return;
+      }
+      
+      // Clear any previous errors
+      setErrors(prev => ({ ...prev, profilePic: '' }));
+      setProfilePic(file);
     }
   };
 
@@ -204,7 +224,6 @@ const SignupStep2Page: React.FC<{ navigation: Navigation }> = ({ navigation }) =
     
     setIsLoading(true);
     try {
-      // Convert profile pic to base64 if provided
       let profilePicBase64 = null;
       if (profilePic) {
         const reader = new FileReader();
@@ -236,7 +255,8 @@ const SignupStep2Page: React.FC<{ navigation: Navigation }> = ({ navigation }) =
       } else {
         setGeneralError(response.message || 'Failed to complete profile. Please try again.');
       }
-    } catch (error) {
+    } catch (error: any) {
+      console.error('Profile completion error:', error);
       setGeneralError('An error occurred. Please try again.');
     } finally {
       setIsLoading(false);
