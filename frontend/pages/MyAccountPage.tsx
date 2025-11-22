@@ -14,10 +14,10 @@ import {
     InboxIcon,
     NotificationIcon,
     MessengerIcon,
-    GithubIcon,
     CrownBadgeIcon,
     ShieldBadgeIcon,
 } from '../components/icons/AccountIcons';
+import { GithubIcon, LinkedInIcon, InstagramIcon, FacebookIcon, TwitterIcon } from '../components/icons/SocialIcons';
 import { EditIcon, PlusCircleIcon, SearchIcon, XCircleIcon } from '../components/icons/MiscIcons';
 import { HamburgerIcon, CloseIcon } from '../components/icons/MenuIcons';
 import { authApi } from '../utils/api';
@@ -65,7 +65,6 @@ const MyAccountPage: React.FC<{ navigation: Navigation }> = ({ navigation }) => 
         socialLinks: [],
     });
     
-    // State for form inputs
     const [editData, setEditData] = useState<EditFormData | null>(null);
 
     useEffect(() => {
@@ -134,6 +133,7 @@ const MyAccountPage: React.FC<{ navigation: Navigation }> = ({ navigation }) => 
         setEditData({
             ...userData,
             profilePicFile: null,
+            socialLinks: userData.socialLinks && userData.socialLinks.length > 0 ? [...userData.socialLinks] : [''],
         }); 
         setIsEditing(true);
     };
@@ -189,7 +189,11 @@ const MyAccountPage: React.FC<{ navigation: Navigation }> = ({ navigation }) => 
             if (editData.availability) updateData.availability = editData.availability;
             if (editData.teachSkills.length > 0) updateData.teachSkills = editData.teachSkills;
             if (editData.learnSkills.length > 0) updateData.learnSkills = editData.learnSkills;
-            if (editData.socialLinks) updateData.socialLinks = editData.socialLinks.filter(link => link.trim() !== '');
+            if (editData.socialLinks) {
+                updateData.socialLinks = editData.socialLinks
+                    .filter(link => link.trim() !== '')
+                    .map(link => normalizeUrl(link));
+            }
             if (profilePicBase64 && profilePicBase64 !== userData.profilePicUrl) {
                 updateData.profilePic = profilePicBase64;
             }
@@ -201,14 +205,16 @@ const MyAccountPage: React.FC<{ navigation: Navigation }> = ({ navigation }) => 
                 setUserData(prev => ({
                     ...prev,
                     name: editData.name,
-                    email: editData.email,
+                    email: prev.email, 
                     dob: editData.dob,
                     about: editData.about,
                     availability: editData.availability,
                     teachSkills: editData.teachSkills,
                     learnSkills: editData.learnSkills,
                     profilePicUrl: profilePicBase64,
-                    socialLinks: editData.socialLinks,
+                    socialLinks: editData.socialLinks
+                        .filter(link => link.trim() !== '')
+                        .map(link => normalizeUrl(link)),
                 }));
                 setIsEditing(false);
                 setEditData(null);
@@ -282,6 +288,32 @@ const MyAccountPage: React.FC<{ navigation: Navigation }> = ({ navigation }) => 
         'text-sky-500', 'text-rose-500'
     ];
 
+    const getSocialIcon = (url: string) => {
+        const lowerUrl = url.toLowerCase();
+        if (lowerUrl.includes('github.com')) {
+            return <GithubIcon className="w-6 h-6" />;
+        } else if (lowerUrl.includes('linkedin.com')) {
+            return <LinkedInIcon className="w-6 h-6" />;
+        } else if (lowerUrl.includes('instagram.com')) {
+            return <InstagramIcon className="w-6 h-6" />;
+        } else if (lowerUrl.includes('facebook.com')) {
+            return <FacebookIcon className="w-6 h-6" />;
+        } else if (lowerUrl.includes('twitter.com') || lowerUrl.includes('x.com')) {
+            return <TwitterIcon className="w-6 h-6" />;
+        }
+
+        return <GithubIcon className="w-6 h-6" />;
+    };
+
+    const normalizeUrl = (url: string): string => {
+        if (!url) return url;
+        const trimmed = url.trim();
+        if (trimmed.startsWith('http://') || trimmed.startsWith('https://')) {
+            return trimmed;
+        }
+        return `https://${trimmed}`;
+    };
+
     const renderEditForm = () => {
         if (!editData) return null;
         const previewUrl = editData.profilePicFile ? URL.createObjectURL(editData.profilePicFile) : userData.profilePicUrl;
@@ -315,7 +347,8 @@ const MyAccountPage: React.FC<{ navigation: Navigation }> = ({ navigation }) => 
                     </div>
                     <div>
                         <label className="block text-sm font-medium text-gray-700 mb-1">Email Address</label>
-                        <input type="email" name="email" value={editData.email} onChange={handleInputChange} className="w-full border border-gray-300 p-2 rounded-md" placeholder="Enter your email address" />
+                        <input type="email" name="email" value={editData.email} disabled className="w-full border border-gray-300 p-2 rounded-md bg-gray-100 cursor-not-allowed" placeholder="Enter your email address" />
+                        <p className="text-xs text-gray-500 mt-1">Email cannot be changed</p>
                     </div>
                     <div>
                         <label className="block text-sm font-medium text-gray-700 mb-1">Date of Birth</label>
@@ -339,27 +372,32 @@ const MyAccountPage: React.FC<{ navigation: Navigation }> = ({ navigation }) => 
                     </div>
                      <div>
                         <label className="block text-sm font-medium text-gray-700 mb-1">Social Media Links</label>
-                        {editData.socialLinks.map((link, index) => (
-                            <div key={index} className="flex items-center space-x-2 mt-2">
-                                <input
-                                    type="url"
-                                    value={link}
-                                    onChange={(e) => handleSocialLinkChange(index, e.target.value)}
-                                    className="w-full border border-gray-300 p-2 rounded-md"
-                                    placeholder="https://github.com/your-profile"
-                                />
-                                {editData.socialLinks.length > 1 && (
-                                    <button type="button" onClick={() => handleRemoveSocialLink(index)} className="text-red-500 hover:text-red-700">
-                                        ✕
-                                    </button>
-                                )}
-                                {index === editData.socialLinks.length - 1 && (
-                                    <button type="button" onClick={handleAddSocialLink} className="text-brand-teal hover:text-brand-teal-dark">
-                                        +
-                                    </button>
-                                )}
-                            </div>
-                        ))}
+                        <div className="space-y-2">
+                            {editData.socialLinks.map((link, index) => (
+                                <div key={index} className="flex items-center space-x-2">
+                                    <input
+                                        type="url"
+                                        value={link}
+                                        onChange={(e) => handleSocialLinkChange(index, e.target.value)}
+                                        className="w-full border border-gray-300 p-2 rounded-md"
+                                        placeholder="https://github.com/your-profile or https://linkedin.com/in/your-profile"
+                                    />
+                                    {editData.socialLinks.length > 1 && (
+                                        <button type="button" onClick={() => handleRemoveSocialLink(index)} className="text-red-500 hover:text-red-700" title="Remove link">
+                                            <XCircleIcon className="h-6 w-6"/>
+                                        </button>
+                                    )}
+                                </div>
+                            ))}
+                        </div>
+                        <button
+                            type="button"
+                            onClick={handleAddSocialLink}
+                            className="mt-2 flex items-center text-sm font-medium text-brand-teal hover:text-brand-teal-dark"
+                        >
+                            <PlusCircleIcon className="h-5 w-5 mr-1" />
+                            Add another link
+                        </button>
                     </div>
                     <div className="flex flex-col sm:flex-row justify-end gap-3 sm:space-x-4 pt-4">
                         <button 
@@ -412,11 +450,6 @@ const MyAccountPage: React.FC<{ navigation: Navigation }> = ({ navigation }) => 
                         <div className="hidden md:flex items-center space-x-4">
                             <button title="Notifications" className="text-gray-500 hover:text-brand-teal"><NotificationIcon className="w-6 h-6"/></button>
                             <button title="Messages" className="text-gray-500 hover:text-brand-teal"><MessengerIcon className="w-6 h-6"/></button>
-                            {userData.socialLinks?.[0] && (
-                                <a href={userData.socialLinks[0]} target="_blank" rel="noopener noreferrer" className="text-gray-500 hover:text-brand-teal">
-                                    <GithubIcon className="w-6 h-6"/>
-                                </a>
-                            )}
                             <div className="w-px h-6 bg-gray-200"></div>
                         </div>
                         <button onClick={handleEdit} className="bg-gray-100 p-2 rounded-lg shadow-sm border border-gray-200 hover:bg-gray-200" aria-label="Edit Profile">
@@ -473,6 +506,30 @@ const MyAccountPage: React.FC<{ navigation: Navigation }> = ({ navigation }) => 
                 <h3 className="text-xl font-semibold text-gray-800 mb-4">Availability</h3>
                 <p className="text-gray-600 whitespace-pre-line">{userData.availability}</p>
             </div>
+
+            {/* Social Links */}
+            {userData.socialLinks && userData.socialLinks.length > 0 && (
+                <div className="bg-white p-4 sm:p-6 rounded-lg shadow-sm">
+                    <h3 className="text-xl font-semibold text-gray-800 mb-4">Social Links</h3>
+                    <div className="flex flex-wrap gap-4">
+                        {userData.socialLinks.map((link, index) => {
+                            const normalizedUrl = normalizeUrl(link);
+                            return (
+                                <a
+                                    key={index}
+                                    href={normalizedUrl}
+                                    target="_blank"
+                                    rel="noopener noreferrer"
+                                    className="text-gray-500 hover:text-brand-teal transition-colors"
+                                    title={link}
+                                >
+                                    {getSocialIcon(link)}
+                                </a>
+                            );
+                        })}
+                    </div>
+                </div>
+            )}
 
             {/* Roadmap */}
             <div className="bg-white p-4 sm:p-6 rounded-lg shadow-sm">
@@ -531,7 +588,6 @@ const MyAccountPage: React.FC<{ navigation: Navigation }> = ({ navigation }) => 
                              <button title="Search" onClick={() => setIsMobileSearchOpen(true)} className="text-gray-600 hover:text-brand-teal"><SearchIcon className="w-6 h-6"/></button>
                              <button title="Notifications" className="text-gray-600 hover:text-brand-teal"><NotificationIcon className="w-6 h-6"/></button>
                              <button title="Messages" className="text-gray-600 hover:text-brand-teal"><MessengerIcon className="w-6 h-6"/></button>
-                             {userData.socialLinks?.[0] && <a href={userData.socialLinks[0]} target="_blank" rel="noopener noreferrer" className="text-gray-600 hover:text-brand-teal"><GithubIcon className="w-6 h-6"/></a>}
                              <button title="Menu" onClick={() => setIsSidebarOpen(!isSidebarOpen)} className="text-brand-teal">
                                 {isSidebarOpen ? <CloseIcon className="w-6 h-6" /> : <HamburgerIcon className="w-6 h-6" />}
                             </button>
