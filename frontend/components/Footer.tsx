@@ -19,7 +19,7 @@ const Footer: React.FC<FooterProps> = ({ navigation }) => {
           <div className="md:col-span-2">
             <h3 className="font-semibold mb-4 uppercase">Links</h3>
             <ul className="space-y-2">
-<<<<<<< HEAD
+
               <li>
                 <a 
                   onClick={() => navigation.navigateTo(Page.AboutUs)} 
@@ -35,12 +35,8 @@ const Footer: React.FC<FooterProps> = ({ navigation }) => {
                   Contact
                  </a>
               </li>
-=======
-              <li><a href="#" className="hover:underline text-gray-300">Home</a></li>
-              <li><a href="#" className="hover:underline text-gray-300">Browse</a></li>
-              <li><a href="#" className="hover:underline text-gray-300">About Us</a></li>
-              <li><a href="#" className="hover:underline text-gray-300">Contact</a></li>
->>>>>>> 30995dc10da19b58cfd601984b908c105e8613f0
+
+
             </ul>
           </div>
 
