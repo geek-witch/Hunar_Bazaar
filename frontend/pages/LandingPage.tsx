@@ -183,7 +183,11 @@ const LandingPage: React.FC<{ navigation: Navigation }> = ({ navigation }) => {
                             <div className="flex flex-wrap items-center">
                                 <img src="/asset/user1.jpg" alt="User" className="w-12 h-12 rounded-full mr-4"/>
                                 <div>
+<<<<<<< HEAD
                                     <h4 className="font-semibold text-brand-teal">Ali Khan</h4>
+=======
+                                    <h4 className="font-semibold text-brand-teal">John Doe</h4>
+>>>>>>> 30995dc10da19b58cfd601984b908c105e8613f0
                                     <p className="text-sm text-gray-500">Coding Student</p>
                                 </div>
                             </div>
@@ -193,7 +197,11 @@ const LandingPage: React.FC<{ navigation: Navigation }> = ({ navigation }) => {
                             <div className="flex flex-wrap items-center">
                                 <img src="/asset/user2.png" alt="User" className="w-12 h-12 rounded-full mr-4"/>
                                 <div>
+<<<<<<< HEAD
                                     <h4 className="font-semibold text-brand-teal">Ayesha Rana</h4>
+=======
+                                    <h4 className="font-semibold text-brand-teal">Jane Smith</h4>
+>>>>>>> 30995dc10da19b58cfd601984b908c105e8613f0
                                     <p className="text-sm text-gray-500">Designer</p>
                                 </div>
                             </div>

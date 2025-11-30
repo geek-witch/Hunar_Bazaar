@@ -14,9 +14,12 @@ const SKILLS_LIST = [
   'UI/UX Design', 'Figma', 'Web Development'
 ];
 
+<<<<<<< HEAD
 // ✅ Days List
 const DAYS = ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"];
 
+=======
+>>>>>>> 30995dc10da19b58cfd601984b908c105e8613f0
 const MultiSelectDropdown: React.FC<{
   options: string[];
   selectedOptions: string[];
@@ -104,6 +107,7 @@ const MultiSelectDropdown: React.FC<{
   );
 };
 
+<<<<<<< HEAD
 const SignupStep2Page: React.FC<{ navigation: Navigation }> = ({ navigation }) => {
   const [teachSkills, setTeachSkills] = useState<string[]>([]);
   const [learnSkills, setLearnSkills] = useState<string[]>([]);
@@ -115,6 +119,13 @@ const SignupStep2Page: React.FC<{ navigation: Navigation }> = ({ navigation }) =
     to: ''
   });
 
+=======
+
+const SignupStep2Page: React.FC<{ navigation: Navigation }> = ({ navigation }) => {
+  const [teachSkills, setTeachSkills] = useState<string[]>([]);
+  const [learnSkills, setLearnSkills] = useState<string[]>([]);
+  const [availability, setAvailability] = useState<string>('');
+>>>>>>> 30995dc10da19b58cfd601984b908c105e8613f0
   const [bio, setBio] = useState<string>('');
   const [profilePic, setProfilePic] = useState<File | null>(null);
   const [socialLinks, setSocialLinks] = useState<string[]>(['']);
@@ -122,6 +133,7 @@ const SignupStep2Page: React.FC<{ navigation: Navigation }> = ({ navigation }) =
   const [generalError, setGeneralError] = useState('');
 
   const [errors, setErrors] = useState({
+<<<<<<< HEAD
     teachSkills: '', 
     learnSkills: '',
     availability: '',
@@ -133,10 +145,26 @@ const SignupStep2Page: React.FC<{ navigation: Navigation }> = ({ navigation }) =
   useEffect(() => {
     const userId = localStorage.getItem('signupUserId');
     if (!userId) {
+=======
+      teachSkills: '', 
+      learnSkills: '',
+      availability: '',
+      bio: '',
+      profilePic: '',
+      socialLinks: '',
+  });
+
+  useEffect(() => {
+    // Check if user came from step 1
+    const userId = localStorage.getItem('signupUserId');
+    if (!userId) {
+      // Redirect back to step 1 if no userId found
+>>>>>>> 30995dc10da19b58cfd601984b908c105e8613f0
       navigation.navigateTo(Page.Signup1);
     }
   }, [navigation]);
 
+<<<<<<< HEAD
   const handleDayToggle = (day: string) => {
     setAvailability(prev => ({
       ...prev,
@@ -146,6 +174,8 @@ const SignupStep2Page: React.FC<{ navigation: Navigation }> = ({ navigation }) =
     }));
   };
 
+=======
+>>>>>>> 30995dc10da19b58cfd601984b908c105e8613f0
   const handleLinkChange = (index: number, value: string) => {
     const newLinks = [...socialLinks];
     newLinks[index] = value;
@@ -166,6 +196,7 @@ const SignupStep2Page: React.FC<{ navigation: Navigation }> = ({ navigation }) =
     const newErrors = { teachSkills: '', learnSkills: '', availability: '', bio: '', profilePic: '', socialLinks: '' };
     let isValid = true;
     
+<<<<<<< HEAD
     if (bio.trim().length < 20 || bio.trim().length > 500) {
       newErrors.bio = 'Bio must be between 20 and 500 characters.';
       isValid = false;
@@ -177,6 +208,16 @@ const SignupStep2Page: React.FC<{ navigation: Navigation }> = ({ navigation }) =
       isValid = false;
     }
 
+=======
+     if (bio.trim().length < 20 || bio.trim().length > 500) {
+      newErrors.bio = 'Bio must be between 20 and 500 characters.';
+      isValid = false;
+    }
+    if (!availability.trim()) {
+        newErrors.availability = 'Please describe your availability.';
+        isValid = false;
+    }
+>>>>>>> 30995dc10da19b58cfd601984b908c105e8613f0
     if (teachSkills.length === 0) {
       newErrors.teachSkills = 'Please select at least one skill you can teach.';
       isValid = false;
@@ -186,23 +227,38 @@ const SignupStep2Page: React.FC<{ navigation: Navigation }> = ({ navigation }) =
       isValid = false;
     }
 
+<<<<<<< HEAD
     const invalidLinks = socialLinks.filter(link => link.trim() !== '' && !/^(https?:\/\/)?(www\.)?([a-zA-Z0-9-]+\.){1,}[a-zA-Z]{2,}(\/[^\s]*)?$/.test(link));
     if (invalidLinks.length > 0) {
       newErrors.socialLinks = 'One or more social links are invalid.';
+=======
+    // Validate only non-empty social links
+    const invalidLinks = socialLinks.filter(link => link.trim() !== '' && !/^(https?:\/\/)?(www\.)?([a-zA-Z0-9-]+\.){1,}[a-zA-Z]{2,}(\/[^\s]*)?$/.test(link));
+    if (invalidLinks.length > 0) {
+      newErrors.socialLinks = 'One or more social links are invalid. Please use a valid URL format or leave empty.';
+>>>>>>> 30995dc10da19b58cfd601984b908c105e8613f0
       isValid = false;
     }
 
     setErrors(newErrors);
     return isValid;
   }
+<<<<<<< HEAD
 
+=======
+  
+>>>>>>> 30995dc10da19b58cfd601984b908c105e8613f0
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     if (e.target.files && e.target.files[0]) {
       const file = e.target.files[0];
       const maxSize = 10 * 1024 * 1024; 
       
       if (file.size > maxSize) {
+<<<<<<< HEAD
         setErrors(prev => ({ ...prev, profilePic: 'File size exceeds 10MB limit.' }));
+=======
+        setErrors(prev => ({ ...prev, profilePic: 'File size exceeds 10MB limit. Please choose a smaller image.' }));
+>>>>>>> 30995dc10da19b58cfd601984b908c105e8613f0
         setProfilePic(null);
         e.target.value = '';
         return;
@@ -210,12 +266,20 @@ const SignupStep2Page: React.FC<{ navigation: Navigation }> = ({ navigation }) =
       
       const validTypes = ['image/png', 'image/jpeg', 'image/jpg', 'image/gif'];
       if (!validTypes.includes(file.type)) {
+<<<<<<< HEAD
         setErrors(prev => ({ ...prev, profilePic: 'Invalid file type.' }));
+=======
+        setErrors(prev => ({ ...prev, profilePic: 'Invalid file type. Please upload PNG, JPG, or GIF only.' }));
+>>>>>>> 30995dc10da19b58cfd601984b908c105e8613f0
         setProfilePic(null);
         e.target.value = '';
         return;
       }
       
+<<<<<<< HEAD
+=======
+      // Clear any previous errors
+>>>>>>> 30995dc10da19b58cfd601984b908c105e8613f0
       setErrors(prev => ({ ...prev, profilePic: '' }));
       setProfilePic(file);
     }
@@ -224,8 +288,14 @@ const SignupStep2Page: React.FC<{ navigation: Navigation }> = ({ navigation }) =
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setGeneralError('');
+<<<<<<< HEAD
 
     if (!validate()) return;
+=======
+    if (!validate()) {
+      return;
+    }
+>>>>>>> 30995dc10da19b58cfd601984b908c105e8613f0
 
     const userId = localStorage.getItem('signupUserId');
     const signupDataStr = localStorage.getItem('signupData');
@@ -250,6 +320,10 @@ const SignupStep2Page: React.FC<{ navigation: Navigation }> = ({ navigation }) =
         });
       }
 
+<<<<<<< HEAD
+=======
+      // Filter out empty social links
+>>>>>>> 30995dc10da19b58cfd601984b908c105e8613f0
       const validSocialLinks = socialLinks.filter(link => link.trim() !== '');
 
       const response = await authApi.completeProfile({
@@ -260,7 +334,11 @@ const SignupStep2Page: React.FC<{ navigation: Navigation }> = ({ navigation }) =
         bio,
         teachSkills,
         learnSkills,
+<<<<<<< HEAD
         availability, // ✅ NOW SENDING DAYS + FROM + TO
+=======
+        availability,
+>>>>>>> 30995dc10da19b58cfd601984b908c105e8613f0
         socialLinks: validSocialLinks.length > 0 ? validSocialLinks : undefined,
         profilePic: profilePicBase64,
       });
@@ -268,7 +346,11 @@ const SignupStep2Page: React.FC<{ navigation: Navigation }> = ({ navigation }) =
       if (response.success) {
         navigation.navigateTo(Page.Verify);
       } else {
+<<<<<<< HEAD
         setGeneralError(response.message || 'Failed to complete profile.');
+=======
+        setGeneralError(response.message || 'Failed to complete profile. Please try again.');
+>>>>>>> 30995dc10da19b58cfd601984b908c105e8613f0
       }
     } catch (error: any) {
       console.error('Profile completion error:', error);
@@ -294,32 +376,49 @@ const SignupStep2Page: React.FC<{ navigation: Navigation }> = ({ navigation }) =
         )}
         <form className="mt-8 bg-white p-6 sm:p-8 md:p-10 rounded-xl shadow-lg" onSubmit={handleSubmit} noValidate>
           <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
+<<<<<<< HEAD
 
             {/* LEFT SIDE */}
+=======
+            {/* Left Side */}
+>>>>>>> 30995dc10da19b58cfd601984b908c105e8613f0
             <div>
               <label className="block text-sm font-medium text-gray-700">Upload your Picture</label>
               <div className="mt-1 flex justify-center px-6 pt-5 pb-6 border-2 border-gray-300 border-dashed rounded-md">
                 <div className="space-y-1 text-center">
                   <UploadIcon className="mx-auto h-12 w-12 text-gray-400" />
                   <div className="flex text-sm text-gray-600">
+<<<<<<< HEAD
                     <label htmlFor="file-upload" className="relative cursor-pointer bg-white rounded-md font-medium text-brand-teal hover:text-brand-teal-dark">
+=======
+                    <label htmlFor="file-upload" className="relative cursor-pointer bg-white rounded-md font-medium text-brand-teal hover:text-brand-teal-dark focus-within:outline-none">
+>>>>>>> 30995dc10da19b58cfd601984b908c105e8613f0
                       <span>Upload a file</span>
                       <input id="file-upload" name="file-upload" type="file" className="sr-only" onChange={handleFileChange} accept="image/png, image/jpeg, image/gif" />
                     </label>
                     <p className="pl-1">or drag and drop</p>
                   </div>
                   <p className="text-xs text-gray-500">PNG, JPG, GIF up to 10MB</p>
+<<<<<<< HEAD
                   {profilePic && <p className="text-sm text-gray-600 mt-2 font-medium">{profilePic.name}</p>}
+=======
+                   {profilePic && <p className="text-sm text-gray-600 mt-2 font-medium">{profilePic.name}</p>}
+>>>>>>> 30995dc10da19b58cfd601984b908c105e8613f0
                 </div>
               </div>
               {errors.profilePic && <p className="text-red-500 text-xs mt-1">{errors.profilePic}</p>}
 
+<<<<<<< HEAD
+=======
+
+>>>>>>> 30995dc10da19b58cfd601984b908c105e8613f0
               <div className="mt-6">
                 <label htmlFor="bio" className="block text-sm font-medium text-gray-700">Short Bio</label>
                 <textarea id="bio" name="bio" rows={3} className="shadow-sm focus:ring-brand-teal focus:border-brand-teal mt-1 block w-full sm:text-sm border border-gray-300 rounded-md p-2" placeholder="Tell us about yourself..." value={bio} onChange={e => setBio(e.target.value)} />
                 {errors.bio && <p className="text-red-500 text-xs mt-1">{errors.bio}</p>}
               </div>
             </div>
+<<<<<<< HEAD
 
             {/* RIGHT SIDE */}
             <div className="space-y-6">
@@ -430,6 +529,72 @@ const SignupStep2Page: React.FC<{ navigation: Navigation }> = ({ navigation }) =
             <button type="button" onClick={() => navigation.navigateTo(Page.Signup1)} className="text-sm font-medium text-brand-teal hover:text-brand-teal-dark">
               &larr; Back
             </button>
+=======
+            
+            {/* Right Side */}
+            <div className="space-y-6">
+               <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">Skills you can Teach</label>
+                  <MultiSelectDropdown
+                    options={SKILLS_LIST}
+                    selectedOptions={teachSkills}
+                    setSelectedOptions={setTeachSkills}
+                    placeholder="e.g., Python, Graphic Design"
+                  />
+                  {errors.teachSkills && <p className="text-red-500 text-xs mt-1">{errors.teachSkills}</p>}
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">Skills you want to Learn</label>
+                  <MultiSelectDropdown
+                    options={SKILLS_LIST}
+                    selectedOptions={learnSkills}
+                    setSelectedOptions={setLearnSkills}
+                    placeholder="e.g., Spanish, Public Speaking"
+                  />
+                  {errors.learnSkills && <p className="text-red-500 text-xs mt-1">{errors.learnSkills}</p>}
+                </div>
+                 <div>
+                  <label htmlFor="availability" className="block text-sm font-medium text-gray-700">Your Availability</label>
+                  <textarea id="availability" name="availability" rows={3} className="shadow-sm focus:ring-brand-teal focus:border-brand-teal mt-1 block w-full sm:text-sm border border-gray-300 rounded-md p-2" placeholder="e.g., Weekends, or weekdays after 5 PM" value={availability} onChange={e => setAvailability(e.target.value)}></textarea>
+                  {errors.availability && <p className="text-red-500 text-xs mt-1">{errors.availability}</p>}
+                </div>
+                <div>
+                    <label className="block text-sm font-medium text-gray-700">Social Links (Optional)</label>
+                    <div className="space-y-2 mt-1">
+                        {socialLinks.map((link, index) => (
+                            <div key={index} className="flex items-center space-x-2">
+                                <input
+                                    type="url"
+                                    value={link}
+                                    onChange={(e) => handleLinkChange(index, e.target.value)}
+                                    placeholder="https://linkedin.com/in/your-profile"
+                                    className="block w-full sm:text-sm border border-gray-300 rounded-md p-2"
+                                />
+                                {socialLinks.length > 1 && (
+                                     <button type="button" onClick={() => handleRemoveLink(index)} className="text-gray-400 hover:text-red-500" title="Remove link">
+                                         <XCircleIcon className="h-6 w-6"/>
+                                     </button>
+                                )}
+                            </div>
+                        ))}
+                    </div>
+                    <button
+                        type="button"
+                        onClick={handleAddLink}
+                        className="mt-2 flex items-center text-sm font-medium text-brand-teal hover:text-brand-teal-dark"
+                    >
+                        <PlusCircleIcon className="h-5 w-5 mr-1" />
+                        Add another link
+                    </button>
+                    {errors.socialLinks && <p className="text-red-500 text-xs mt-1">{errors.socialLinks}</p>}
+                </div>
+            </div>
+          </div>
+          <div className="pt-8 flex items-center justify-between">
+             <button type="button" onClick={() => navigation.navigateTo(Page.Signup1)} className="text-sm font-medium text-brand-teal hover:text-brand-teal-dark">
+                &larr; Back
+              </button>
+>>>>>>> 30995dc10da19b58cfd601984b908c105e8613f0
             <button 
               type="submit" 
               disabled={isLoading}

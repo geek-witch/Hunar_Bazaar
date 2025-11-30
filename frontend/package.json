@@ -9,8 +9,11 @@
     "preview": "vite preview"
   },
   "dependencies": {
+<<<<<<< HEAD
     "framer-motion": "^12.23.24",
     "lucide-react": "^0.555.0",
+=======
+>>>>>>> 30995dc10da19b58cfd601984b908c105e8613f0
     "react": "^19.2.0",
     "react-dom": "^19.2.0"
   },
