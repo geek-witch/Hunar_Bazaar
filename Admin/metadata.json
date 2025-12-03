@@ -1,0 +1,5 @@
+{
+  "name": "Hunar Bazaar Admin",
+  "description": "Administrative control panel for Hunar Bazaar platform handling users, subscriptions, and support.",
+  "requestFramePermissions": []
+}
