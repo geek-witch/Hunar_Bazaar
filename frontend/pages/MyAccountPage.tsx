@@ -33,13 +33,21 @@ import { EditIcon, PlusCircleIcon, SearchIcon, XCircleIcon } from '../components
 import { HamburgerIcon, CloseIcon } from '../components/icons/MenuIcons';
 import { authApi } from '../utils/api';
 
+type AvailabilitySlot = {
+  id?: number | string;
+  startTime: string;
+  endTime: string;
+  days: string[];
+};
+
+const DAYS_OF_WEEK = ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday', 'Sunday'];
 
 interface UserData {
     name: string;
     email: string;
     dob: string;
     about: string;
-    availability: string;
+    availability: AvailabilitySlot[];
     teachSkills: string[];
     learnSkills: string[];
     credits: number;
@@ -68,7 +76,7 @@ const MyAccountPage: React.FC<{ navigation: Navigation }> = ({ navigation }) => 
         email: '',
         dob: '',
         about: '',
-        availability: '',
+        availability: [],
         teachSkills: [],
         learnSkills: [],
         credits: 0,
@@ -88,7 +96,6 @@ const MyAccountPage: React.FC<{ navigation: Navigation }> = ({ navigation }) => 
             body.style.overflow = 'auto';
         }
 
-        // Cleanup function to reset the style when the component unmounts
         return () => {
             body.style.overflow = 'auto';
         };
@@ -107,7 +114,7 @@ const MyAccountPage: React.FC<{ navigation: Navigation }> = ({ navigation }) => 
                         email: string;
                         dob: string;
                         about: string;
-                        availability: string;
+                        availability: AvailabilitySlot[] | string; // Backend may return array or legacy string
                         teachSkills: string[];
                         learnSkills: string[];
                         credits: number;
@@ -116,6 +123,20 @@ const MyAccountPage: React.FC<{ navigation: Navigation }> = ({ navigation }) => 
                         socialLinks: string[];
                         joinedDate?: string;
                     };
+                    // Convert availability to array format if it's a string (legacy data)
+                    let availabilitySlots: AvailabilitySlot[] = [];
+                    if (Array.isArray(data.availability)) {
+                        availabilitySlots = data.availability.map((slot, index) => ({
+                            id: slot.id || index,
+                            startTime: slot.startTime,
+                            endTime: slot.endTime,
+                            days: Array.isArray(slot.days) ? slot.days : [],
+                        }));
+                    } else if (typeof data.availability === 'string' && data.availability.trim()) {
+                        // Legacy string format - convert to empty array (user will need to set new availability)
+                        availabilitySlots = [];
+                    }
+                    
                     // Note: `joinedDate` should be set by your backend at account creation
                     // (e.g., createdAt). The API should return it and it will be displayed
                     // here as 'Member since' and visible to other users when viewing profiles.
@@ -124,7 +145,7 @@ const MyAccountPage: React.FC<{ navigation: Navigation }> = ({ navigation }) => 
                         email: data.email,
                         dob: data.dob,
                         about: data.about,
-                        availability: data.availability,
+                        availability: availabilitySlots,
                         teachSkills: data.teachSkills,
                         learnSkills: data.learnSkills,
                         credits: data.credits,
@@ -185,7 +206,7 @@ const MyAccountPage: React.FC<{ navigation: Navigation }> = ({ navigation }) => 
                 lastName?: string;
                 dob?: string;
                 about?: string;
-                availability?: string;
+                availability?: AvailabilitySlot[];
                 teachSkills?: string[];
                 learnSkills?: string[];
                 socialLinks?: string[];
@@ -204,7 +225,14 @@ const MyAccountPage: React.FC<{ navigation: Navigation }> = ({ navigation }) => 
 
             if (editData.dob) updateData.dob = editData.dob;
             if (editData.about) updateData.about = editData.about;
-            if (editData.availability) updateData.availability = editData.availability;
+            if (editData.availability && Array.isArray(editData.availability) && editData.availability.length > 0) {
+                // Remove id field before sending to backend (backend doesn't need it)
+                updateData.availability = editData.availability.map(slot => ({
+                    startTime: slot.startTime,
+                    endTime: slot.endTime,
+                    days: slot.days,
+                }));
+            }
             if (editData.teachSkills.length > 0) updateData.teachSkills = editData.teachSkills;
             if (editData.learnSkills.length > 0) updateData.learnSkills = editData.learnSkills;
             if (editData.socialLinks) {
@@ -332,6 +360,169 @@ const MyAccountPage: React.FC<{ navigation: Navigation }> = ({ navigation }) => 
         return `https://${trimmed}`;
     };
 
+    // Availability Selector Component
+    const AvailabilitySelector: React.FC<{
+        availability: AvailabilitySlot[];
+        setAvailability: React.Dispatch<React.SetStateAction<AvailabilitySlot[]>>;
+        setError: React.Dispatch<React.SetStateAction<string>>;
+    }> = ({ availability, setAvailability, setError }) => {
+        const [newSlot, setNewSlot] = useState<Omit<AvailabilitySlot, 'id'>>({
+            startTime: '',
+            endTime: '',
+            days: [],
+        });
+
+        const handleSlotChange = (field: keyof Omit<AvailabilitySlot, 'id' | 'days'>, value: string) => {
+            setNewSlot(prev => ({ ...prev, [field]: value }));
+            setError('');
+        };
+        
+        const handleDayToggle = (day: string) => {
+            setNewSlot(prev => {
+                const newDays = prev.days.includes(day)
+                    ? prev.days.filter(d => d !== day)
+                    : [...prev.days, day];
+                return { ...prev, days: newDays };
+            });
+            setError('');
+        };
+
+        const validateNewSlot = () => {
+            if (!newSlot.startTime || !newSlot.endTime || newSlot.days.length === 0) {
+                setError('Please select start time, end time, and at least one day.');
+                return false;
+            }
+            
+            const start = newSlot.startTime;
+            const end = newSlot.endTime;
+
+            if (start >= end) {
+                setError('Start time must be before end time.');
+                return false;
+            }
+
+            setError('');
+            return true;
+        };
+
+        const handleAddSlot = () => {
+            if (!validateNewSlot()) {
+                return;
+            }
+
+            setAvailability(prevAvail => [
+                ...prevAvail,
+                { ...newSlot, id: Date.now() + Math.random() },
+            ]);
+            
+            setNewSlot(prev => ({ ...prev, startTime: '', endTime: '' }));
+        };
+
+        const handleRemoveSlot = (id: number | string | undefined) => {
+            if (id === undefined) return;
+            setAvailability(prevAvail => prevAvail.filter(slot => slot.id !== id));
+        };
+        
+        const formatTime = (time: string): string => {
+            if (!time) return '';
+            try {
+                const [hours, minutes] = time.split(':').map(Number);
+                const period = hours >= 12 ? 'PM' : 'AM';
+                const displayHours = hours % 12 || 12;
+                return `${displayHours}:${String(minutes).padStart(2, '0')} ${period}`;
+            } catch {
+                return time;
+            }
+        };
+
+        return (
+            <div className="space-y-4">
+                <div className="border border-gray-300 rounded-lg p-4 bg-gray-50">
+                    <h3 className="font-semibold text-gray-800 mb-2">Add Availability Slot</h3>
+                    
+                    <label className="block text-sm font-medium text-gray-700 mb-1">Select Day(s)</label>
+                    <div className="flex flex-wrap gap-2 mb-4">
+                        {DAYS_OF_WEEK.map(day => (
+                            <button
+                                key={day}
+                                type="button"
+                                onClick={() => handleDayToggle(day)}
+                                className={`px-3 py-1 text-xs rounded-full transition duration-150 border ${
+                                    newSlot.days.includes(day) 
+                                        ? 'bg-brand-teal text-white border-brand-teal hover:bg-brand-teal-dark' 
+                                        : 'bg-white text-gray-700 border-gray-300 hover:bg-gray-100'
+                                }`}
+                            >
+                                {day}
+                            </button>
+                        ))}
+                    </div>
+                    
+                    <div className="flex space-x-4 mb-4">
+                        <div className="flex-1">
+                            <label htmlFor="start-time" className="block text-sm font-medium text-gray-700">From (Start Time)</label>
+                            <input 
+                                id="start-time"
+                                type="time" 
+                                value={newSlot.startTime} 
+                                onChange={(e) => handleSlotChange('startTime', e.target.value)}
+                                className="mt-1 block w-full border border-gray-300 rounded-md p-2 shadow-sm focus:ring-brand-teal focus:border-brand-teal sm:text-sm"
+                            />
+                        </div>
+                        <div className="flex-1">
+                            <label htmlFor="end-time" className="block text-sm font-medium text-gray-700">To (End Time)</label>
+                            <input 
+                                id="end-time"
+                                type="time" 
+                                value={newSlot.endTime} 
+                                onChange={(e) => handleSlotChange('endTime', e.target.value)}
+                                className="mt-1 block w-full border border-gray-300 rounded-md p-2 shadow-sm focus:ring-brand-teal focus:border-brand-teal sm:text-sm"
+                            />
+                        </div>
+                    </div>
+                    
+                    <button
+                        type="button"
+                        onClick={handleAddSlot}
+                        className="w-full flex justify-center py-2 px-4 border border-transparent text-sm font-medium rounded-md text-white bg-brand-teal hover:bg-brand-teal-dark"
+                    >
+                        <PlusCircleIcon className="h-5 w-5 mr-2" />
+                        Add Slot
+                    </button>
+                </div>
+
+                {availability.length > 0 && (
+                    <div className="border border-gray-200 rounded-lg p-3 space-y-3 max-h-52 overflow-y-auto">
+                        <p className="text-sm font-medium text-gray-700">Your Current Availability:</p>
+                        {availability.map((slot, index) => (
+                            <div 
+                                key={slot.id || index} 
+                                className="flex justify-between items-center bg-white p-3 border rounded-md shadow-sm"
+                            >
+                                <div>
+                                    <p className="font-semibold text-gray-800">
+                                        {formatTime(slot.startTime)} - {formatTime(slot.endTime)}
+                                    </p>
+                                    <p className="text-xs text-gray-600 mt-1">
+                                        {slot.days.sort((a, b) => DAYS_OF_WEEK.indexOf(a) - DAYS_OF_WEEK.indexOf(b)).join(', ')}
+                                    </p>
+                                </div>
+                                <button 
+                                    type="button" 
+                                    onClick={() => handleRemoveSlot(slot.id)} 
+                                    className="text-gray-400 hover:text-red-500 p-1"
+                                    title="Remove slot"
+                                >
+                                    <XCircleIcon className="h-6 w-6"/>
+                                </button>
+                            </div>
+                        ))}
+                    </div>
+                )}
+            </div>
+        );
+    };
+
     const renderEditForm = () => {
         if (!editData) return null;
         const previewUrl = editData.profilePicFile ? URL.createObjectURL(editData.profilePicFile) : userData.profilePicUrl;
@@ -378,7 +569,17 @@ const MyAccountPage: React.FC<{ navigation: Navigation }> = ({ navigation }) => 
                     </div>
                     <div>
                         <label className="block text-sm font-medium text-gray-700 mb-1">Availability</label>
-                        <textarea name="availability" value={editData.availability} onChange={handleInputChange} rows={3} className="w-full border border-gray-300 p-2 rounded-md" placeholder="Enter your availability (e.g., Weekdays 6 PM - 9 PM EST)"></textarea>
+                        <AvailabilitySelector
+                            availability={editData.availability}
+                            setAvailability={(avail) => {
+                                setEditData(prev => {
+                                    if (!prev) return null;
+                                    const newAvail = typeof avail === 'function' ? avail(prev.availability) : avail;
+                                    return { ...prev, availability: newAvail };
+                                });
+                            }}
+                            setError={setError}
+                        />
                     </div>
                     <div>
                         <label className="block text-sm font-medium text-gray-700 mb-1">Skills to Teach (comma separated)</label>
@@ -510,7 +711,35 @@ const MyAccountPage: React.FC<{ navigation: Navigation }> = ({ navigation }) => 
             {/* Availability */}
             <div className="bg-white p-4 sm:p-6 rounded-lg shadow-sm">
                 <h3 className="text-xl font-semibold text-gray-800 mb-4">Availability</h3>
-                <p className="text-gray-600 whitespace-pre-line">{userData.availability}</p>
+                {userData.availability && userData.availability.length > 0 ? (
+                    <div className="space-y-3">
+                        {userData.availability.map((slot, index) => {
+                            const formatTime = (time: string): string => {
+                                if (!time) return '';
+                                try {
+                                    const [hours, minutes] = time.split(':').map(Number);
+                                    const period = hours >= 12 ? 'PM' : 'AM';
+                                    const displayHours = hours % 12 || 12;
+                                    return `${displayHours}:${String(minutes).padStart(2, '0')} ${period}`;
+                                } catch {
+                                    return time;
+                                }
+                            };
+                            return (
+                                <div key={slot.id || index} className="border border-gray-200 rounded-md p-3 bg-gray-50">
+                                    <p className="font-semibold text-gray-800">
+                                        {formatTime(slot.startTime)} - {formatTime(slot.endTime)}
+                                    </p>
+                                    <p className="text-sm text-gray-600 mt-1">
+                                        {slot.days.sort((a, b) => DAYS_OF_WEEK.indexOf(a) - DAYS_OF_WEEK.indexOf(b)).join(', ')}
+                                    </p>
+                                </div>
+                            );
+                        })}
+                    </div>
+                ) : (
+                    <p className="text-gray-500 italic">No availability set</p>
+                )}
             </div>
 
             {/* Social Links */}

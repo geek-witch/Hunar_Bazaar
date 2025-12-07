@@ -84,7 +84,7 @@ export const Layout: React.FC<LayoutProps> = ({
                <p className="text-xs text-gray-500 font-medium">Muhammad Ali</p>
              </div>
              <img 
-               src="https://images.unsplash.com/photo-1472099645785-5658abf4ff4e?ixlib=rb-1.2.1&ixid=eyJhcHBfaWQiOjEyMDd9&auto=format&fit=facearea&facepad=2&w=256&h=256&q=80"
+               src="https://media.istockphoto.com/id/174766396/photo/young-asian-indian-businessman-working-on-laptop-in-cafeteria.jpg?s=2048x2048&w=is&k=20&c=3UDLvCQLVtrs5v5yDJt6PrIMpj5XI_anJwIK-ODSG7E="
                alt="Admin Profile"
                className="h-10 w-10 rounded-full object-cover border-2 border-[#0E4B5B] shadow-sm"
              />

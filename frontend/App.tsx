@@ -20,6 +20,28 @@ import ContactUsPage from "./pages/ContactUsPage"
 import CheckoutPage from "./pages/CheckoutPage"
 import ViewProfilePage from "./pages/ViewProfilePage"
 
+const Notification: React.FC<{ message: string; onClose: () => void }> = ({ message, onClose }) => {
+    useEffect(() => {
+        const timer = setTimeout(() => {
+            onClose();
+        }, 5000); // Auto-close after 5 seconds
+        return () => clearTimeout(timer);
+    }, [onClose]);
+
+    return (
+        // Key changes: fixed top-4, left-1/2, translate-x-1/2 for center-top.
+        // Background white, text-gray-800, teal border on the left (border-l-4)
+        <div className="fixed top-4 left-1/2 transform -translate-x-1/2 z-[100] p-4 pr-10 rounded-lg shadow-xl bg-white text-gray-800 flex items-center justify-between min-w-[300px] border-l-4 border-brand-teal">
+            <span className="text-sm font-medium">{message}</span>
+            <button 
+                onClick={onClose} 
+                className="absolute right-2 top-2 p-1 text-gray-400 hover:text-gray-600 transition"
+            >
+                &times;
+            </button>
+        </div>
+    );
+};
 export enum Page {
   Landing = 0,
   Login = 1,
@@ -128,6 +150,14 @@ const App: React.FC = () => {
     return !!localStorage.getItem("token")
   })
 
+  // --- NEW STATE FOR NOTIFICATION ---
+   const [notification, setNotification] = useState<{ message: string } | null>(null)
+
+  const closeNotification = useCallback(() => {
+    setNotification(null)
+  }, [])
+  // ----------------------------------
+
   // Effect to handle browser navigation (back/forward buttons) via hash changes
   useEffect(() => {
     const handleHashChange = () => {
@@ -175,23 +205,27 @@ const App: React.FC = () => {
     }
   }, [])
 
+ // --- MODIFIED LOGIN FUNCTION ---
   const login = useCallback(() => {
     setIsAuthenticated(true)
     // After login, replace history entry so back doesn't go back to login
     navigateTo(Page.Home, true)
+    setNotification({ message: 'Login Successfully' })
   }, [navigateTo])
+  // -------------------------------
 
+  // --- MODIFIED LOGOUT FUNCTION ---
   const logout = useCallback(() => {
     localStorage.removeItem("token")
     setIsAuthenticated(false)
     navigateTo(Page.Landing)
+    setNotification({ message: 'Logout Successfully' })
   }, [navigateTo])
+  // --------------------------------
 
   const navigation: Navigation = { navigateTo, login, logout }
 
   // Redirect authenticated users away from the Landing page.
-  // This handles the case where browser back/forward navigates to `#/` while the user
-  // is already logged in (token present). We replace history so landing doesn't remain.
   useEffect(() => {
     if (isAuthenticated && currentPage === Page.Landing) {
       navigateTo(Page.Home, true)
@@ -241,8 +275,16 @@ const App: React.FC = () => {
 
   const showHeaderFooter = currentPage !== Page.MyAccount
 
-  return (
+ return (
     <div className="bg-white min-h-screen flex flex-col font-sans">
+      {/* --- NOTIFICATION DISPLAY --- */}
+      {notification && (
+        <Notification 
+          message={notification.message} 
+          onClose={closeNotification} 
+        />
+      )}
+      {/* ---------------------------- */}
       {showHeaderFooter && (
         <Header isAuthenticated={isAuthenticated} navigation={navigation} currentPage={currentPage} />
       )}
@@ -253,5 +295,3 @@ const App: React.FC = () => {
 }
 
 export default App
-
-     

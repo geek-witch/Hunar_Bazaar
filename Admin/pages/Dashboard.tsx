@@ -3,7 +3,8 @@ import {
   AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, 
   BarChart, Bar
 } from 'recharts';
-import { Users, AlertCircle, DollarSign, Share2 } from 'lucide-react';
+
+import { Users, AlertCircle, Coins, Share2 } from 'lucide-react'; // <-- Updated
 
 const data = [
   { name: 'Jan', users: 400, complaints: 24 },
@@ -85,7 +86,7 @@ export const Dashboard = () => {
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
           <StatCard title="Total Users" value="12,345" icon={Users} color="bg-blue-600" />
           <StatCard title="Active Disputes" value="23" icon={AlertCircle} color="bg-red-500" />
-          <StatCard title="Monthly Revenue" value="PKR 450k" icon={DollarSign} color="bg-[#0E4B5B]" />
+          <StatCard title="Monthly Revenue" value="PKR 450k" icon={Coins} color="bg-[#0E4B5B]" /> 
           <StatCard title="Successful Skill Exchanges" value="8,942" icon={Share2} color="bg-green-500" />
         </div>
 

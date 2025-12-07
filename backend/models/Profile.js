@@ -52,9 +52,36 @@ const profileSchema = new mongoose.Schema({
     }
   },
   availability: {
-    type: String,
+    type: [{
+      startTime: {
+        type: String,
+        required: true,
+        match: [/^([0-1]?[0-9]|2[0-3]):[0-5][0-9]$/, 'Start time must be in HH:MM format']
+      },
+      endTime: {
+        type: String,
+        required: true,
+        match: [/^([0-1]?[0-9]|2[0-3]):[0-5][0-9]$/, 'End time must be in HH:MM format']
+      },
+      days: {
+        type: [String],
+        required: true,
+        validate: {
+          validator: function(v) {
+            const validDays = ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday', 'Sunday'];
+            return v.length > 0 && v.every(day => validDays.includes(day));
+          },
+          message: 'Days must be valid day names and at least one day is required'
+        }
+      }
+    }],
     required: true,
-    trim: true
+    validate: {
+      validator: function(v) {
+        return Array.isArray(v) && v.length > 0;
+      },
+      message: 'At least one availability slot is required'
+    }
   },
   socialLinks: {
     type: [String],

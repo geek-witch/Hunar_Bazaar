@@ -6,6 +6,9 @@ const cors = require('cors');
 const connectDB = require('../config/db');
 const authRoutes = require('../routes/auth');
 const profileRoutes = require('../routes/profile');
+const skillRoutes = require('../routes/skill');
+const contactRoutes = require('../routes/contact');
+const supportRoutes = require('../routes/support');
 
 const app = express();
 
@@ -21,6 +24,9 @@ app.use(cookieParser());
 
 app.use('/api/auth', authRoutes);
 app.use('/api/auth', profileRoutes);
+app.use('/api/skills', skillRoutes);
+app.use('/api/contact', contactRoutes);
+app.use('/api/support', supportRoutes);
 
 app.use((err, req, res, next) => {
   if (err.type === 'entity.too.large' || err.status === 413) {

@@ -1,8 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { Layout } from './components/Layout';
 import { Login } from './pages/Login';
-import { ForgotPassword } from './pages/ForgotPassword';
-import { ResetPassword } from './pages/ResetPassword';
 import { Dashboard } from './pages/Dashboard';
 import { UsersPage } from './pages/Users';
 import { SubscriptionsPage } from './pages/Subscriptions';
@@ -12,13 +10,11 @@ import { SubscriptionPlan, AppNotification } from './types';
 import { Notification } from './components/Notification';
 
 type View = 
-  | 'login' 
-  | 'forgot-password' 
-  | 'reset-password' 
-  | 'dashboard' 
-  | 'users' 
-  | 'subscriptions' 
-  | 'support' 
+  | 'login'
+  | 'dashboard'
+  | 'users'
+  | 'subscriptions'
+  | 'support'
   | 'logs';
 
 const INITIAL_PLANS: SubscriptionPlan[] = [
@@ -68,13 +64,12 @@ const App: React.FC = () => {
       if (event.state && event.state.view) {
         setCurrentView(event.state.view);
       } else {
-        // Default fallback if state is missing
         const params = new URLSearchParams(window.location.search);
         const view = params.get('page') as View;
         if (view && isAuthenticated) {
-           setCurrentView(view);
+          setCurrentView(view);
         } else if (!isAuthenticated) {
-           setCurrentView('login');
+          setCurrentView('login');
         }
       }
     };
@@ -85,11 +80,11 @@ const App: React.FC = () => {
 
   // Initial Load - Check URL
   useEffect(() => {
-     const params = new URLSearchParams(window.location.search);
-     const view = params.get('page') as View;
-     if (view && isAuthenticated) {
-         setCurrentView(view);
-     }
+    const params = new URLSearchParams(window.location.search);
+    const view = params.get('page') as View;
+    if (view && isAuthenticated) {
+      setCurrentView(view);
+    }
   }, [isAuthenticated]);
 
   const updateView = (view: View) => {
@@ -128,21 +123,8 @@ const App: React.FC = () => {
             onClose={closeNotification} 
           />
         )}
-        {currentView === 'forgot-password' ? (
-          <ForgotPassword 
-            onBack={() => updateView('login')} 
-            onReset={() => updateView('reset-password')}
-          />
-        ) : currentView === 'reset-password' ? (
-          <ResetPassword 
-            onComplete={() => updateView('login')}
-          />
-        ) : (
-          <Login 
-            onLogin={handleLogin} 
-            onForgotPassword={() => updateView('forgot-password')}
-          />
-        )}
+
+        <Login onLogin={handleLogin} />
       </>
     );
   }

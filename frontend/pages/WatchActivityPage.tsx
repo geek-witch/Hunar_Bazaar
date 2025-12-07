@@ -24,6 +24,7 @@ interface Feedback {
 interface Complaint {
   message: string
   submittedAt: string
+  attachment?: string
 }
 
 interface Activity {
@@ -58,7 +59,7 @@ const WatchActivityPage: React.FC = () => {
     skill: "",
   })
   const [complaintText, setComplaintText] = useState("")
-
+  const [complaintAttachment, setComplaintAttachment] = useState<string>("")
   const [activities, setActivities] = useState<Activity[]>([
     {
       id: "1",
@@ -91,7 +92,12 @@ const WatchActivityPage: React.FC = () => {
         comment: "Excellent teacher! Very patient and knowledgeable.",
         reportedHours: 1.5,
         submittedAt: "2024-11-22T17:00:00"
-      }
+      },
+       complaint: {
+        message: "The reported time was incorrect by 15 minutes.",
+        submittedAt: "2024-11-22T17:05:00",
+        attachment: "time_discrepancy_log.png" // Mock existing attachment
+        }
     },
   ])
 
@@ -202,14 +208,23 @@ const WatchActivityPage: React.FC = () => {
     setFeedbackForm({ rating: 0, comment: "", reportedHours: 0, teacherName: "", skill: "" })
   }
 
-  const openComplaintModal = (activity: Activity) => {
+   const openComplaintModal = (activity: Activity) => {
     setSelectedActivity(activity)
     setComplaintText(activity.complaint?.message || "")
+    setComplaintAttachment(activity.complaint?.attachment || "")
     setShowComplaintModal(true)
   }
 
   const submitComplaint = () => {
     if (!selectedActivity) return
+
+     if (selectedActivity.complaint) {
+      setShowComplaintModal(false)
+      setSelectedActivity(null)
+      setComplaintText("")
+      setComplaintAttachment("")
+      return
+    }
 
     const updatedActivities = activities.map(act => {
       if (act.id === selectedActivity.id) {
@@ -217,7 +232,8 @@ const WatchActivityPage: React.FC = () => {
           ...act,
           complaint: {
             message: complaintText,
-            submittedAt: new Date().toISOString()
+            submittedAt: new Date().toISOString(),
+            attachment: complaintAttachment
           }
         }
       }
@@ -228,6 +244,7 @@ const WatchActivityPage: React.FC = () => {
     setShowComplaintModal(false)
     setSelectedActivity(null)
     setComplaintText("")
+    setComplaintAttachment("")
   }
 
   const filterByTime = (activity: Activity) => {
@@ -345,6 +362,13 @@ const WatchActivityPage: React.FC = () => {
                       </p>
                     </div>
                   )}
+
+                   {/* Complaint Display - shows attachment link if present */}
+                  {activity.complaint?.attachment && (
+                    <p className="text-xs text-red-600 mt-1">
+                      Attachment: **{activity.complaint.attachment}**
+                    </p>
+                  )}
 
                   {/* Feedback Button - view if already submitted */}
                   <button
@@ -483,45 +507,88 @@ const WatchActivityPage: React.FC = () => {
         </div>
       )}
 
-      {/* Complaint Modal */}
-      {showComplaintModal && selectedActivity && (
-        <div className="fixed inset-0 bg-black bg-opacity-40 flex items-center justify-center p-4 z-50">
-          <div className="bg-white rounded-xl max-w-md w-full p-6">
-            <h2 className="text-2xl font-bold mb-4">Report an Issue</h2>
+      {/* Complaint Modal*/}
+      {showComplaintModal && selectedActivity && (
+        <div className="fixed inset-0 bg-black bg-opacity-40 flex items-center justify-center p-4 z-50">
+          <div className="bg-white rounded-xl max-w-md w-full p-6">
+            <h2 className="text-2xl font-bold mb-4">
+              {selectedActivity.complaint ? "View Complaint" : "Report an Issue"}
+            </h2>
 
-            <p className="text-sm mb-4 text-gray-700">
-              If you believe the teacher has entered incorrect hours or there was any issue with the session, you may report it here.
-            </p>
+            <p className="text-sm mb-4 text-gray-700">
+              If you believe the teacher has entered incorrect hours or there was any issue with the session, you may report it here.
+            </p>
 
-            <textarea
-              value={complaintText}
-              onChange={(e) => setComplaintText(e.target.value)}
-              rows={5}
-              className="w-full border rounded-lg px-3 py-2 mb-6"
-              placeholder="Describe the issue..."
-            />
+            {/* Complaint Textarea */}
+            <label className="text-sm font-semibold">Complaint Details</label>
+            <textarea
+              value={complaintText}
+              onChange={(e) => setComplaintText(e.target.value)}
+              rows={5}
+              className="w-full border rounded-lg px-3 py-2 mb-4"
+              placeholder="Describe the issue..."
+              disabled={!!selectedActivity.complaint} // Disable if complaint exists (view-only)
+            />
 
-            <div className="flex gap-3">
-              <button
-                onClick={() => setShowComplaintModal(false)}
-                className="flex-1 bg-gray-200 py-2 rounded-lg"
-              >
-                Close
-              </button>
+            {/* Attachment Section (NEW) */}
+            <div className="mb-6">
+              <label className="text-sm font-semibold block mb-2">Attach Screenshot / Image (Optional)</label>
 
-              <button
-                onClick={submitComplaint}
-                className="flex-1 bg-red-500 text-white py-2 rounded-lg"
-              >
-                Submit Complaint
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
+              {selectedActivity.complaint ? (
+                // View mode: show existing attachment
+                <p className="text-sm text-gray-600">
+                  {selectedActivity.complaint.attachment ? (
+                    <span>Attached File: <strong className="text-red-600">{selectedActivity.complaint.attachment}</strong></span>
+                  ) : (
+                    <span>No file attached.</span>
+                  )}
+                </p>
+              ) : (
+                // Edit/Add mode: show file input
+                <input
+                  type="file"
+                  accept="image/*"
+                  onChange={(e) => {
+                    // Mocking file path storage for demonstration
+                    const file = e.target.files ? e.target.files[0] : null
+                    setComplaintAttachment(file ? file.name : "")
+                  }}
+                  className="w-full text-sm text-gray-500 file:mr-4 file:py-2 file:px-4 file:rounded-lg file:border-0 file:text-sm file:font-semibold file:bg-red-50 file:text-red-700 hover:file:bg-red-100"
+                />
+              )}
+            </div>
+            {/* End Attachment Section */}
 
-    </div>
-  )
+            <div className="flex gap-3">
+              <button
+                onClick={() => {
+                  setShowComplaintModal(false)
+                  setSelectedActivity(null)
+                  setComplaintText("")
+                  setComplaintAttachment("")
+                }}
+                className="flex-1 bg-gray-200 py-2 rounded-lg"
+              >
+                Close
+              </button>
+
+              {/* Only show submit button if no complaint exists (allow submission) */}
+              {!selectedActivity.complaint && (
+                <button
+                  onClick={submitComplaint}
+                  className="flex-1 bg-red-500 text-white py-2 rounded-lg"
+                  disabled={!complaintText} // Disable if message is empty
+                >
+                  Submit Complaint
+                </button>
+              )}
+            </div>
+          </div>
+        </div>
+      )}
+
+    </div>
+  )
 }
 
 export default WatchActivityPage

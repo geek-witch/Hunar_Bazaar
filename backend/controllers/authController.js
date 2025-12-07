@@ -4,7 +4,6 @@ const OTP = require('../models/OTP');
 const PasswordReset = require('../models/PasswordReset');
 const jwt = require('jsonwebtoken');
 const { sendOTPEmail, sendPasswordResetEmail } = require('../utils/emailService');
-const crypto = require('crypto');
 
 const generateToken = (userId) => {
   return jwt.sign({ userId }, process.env.JWT_SECRET, {
@@ -69,23 +68,9 @@ exports.signup = async (req, res) => {
       password
     });
 
-    const otpCode = generateOTP();
-    await OTP.create({
-      email: email.toLowerCase(),
-      code: otpCode,
-      type: 'verification',
-      expiresAt: new Date(Date.now() + 10 * 60 * 1000) 
-    });
-
-    try {
-      await sendOTPEmail(email, otpCode);
-    } catch (emailError) {
-      console.error('Error sending OTP email:', emailError);
-    }
-
     res.status(201).json({
       success: true,
-      message: 'User created successfully. OTP sent to email.',
+      message: 'User created successfully. Please complete your profile to receive OTP.',
       data: {
         userId: user._id,
         email: user.email,
@@ -134,6 +119,60 @@ exports.completeProfile = async (req, res) => {
       });
     }
 
+    // Validate availability format
+    if (!Array.isArray(availability) || availability.length === 0) {
+      return res.status(400).json({
+        success: false,
+        message: 'At least one availability slot is required'
+      });
+    }
+
+    const validDays = ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday', 'Sunday'];
+    const timeRegex = /^([0-1]?[0-9]|2[0-3]):[0-5][0-9]$/;
+
+    for (const slot of availability) {
+      if (!slot.startTime || !slot.endTime || !slot.days || !Array.isArray(slot.days)) {
+        return res.status(400).json({
+          success: false,
+          message: 'Each availability slot must have startTime, endTime, and days array'
+        });
+      }
+
+      if (!timeRegex.test(slot.startTime) || !timeRegex.test(slot.endTime)) {
+        return res.status(400).json({
+          success: false,
+          message: 'Time must be in HH:MM format (24-hour)'
+        });
+      }
+
+      if (slot.days.length === 0) {
+        return res.status(400).json({
+          success: false,
+          message: 'Each availability slot must have at least one day'
+        });
+      }
+
+      if (!slot.days.every(day => validDays.includes(day))) {
+        return res.status(400).json({
+          success: false,
+          message: 'Invalid day name. Valid days are: Monday, Tuesday, Wednesday, Thursday, Friday, Saturday, Sunday'
+        });
+      }
+
+      // Validate that start time is before end time
+      const [startHours, startMinutes] = slot.startTime.split(':').map(Number);
+      const [endHours, endMinutes] = slot.endTime.split(':').map(Number);
+      const startTotal = startHours * 60 + startMinutes;
+      const endTotal = endHours * 60 + endMinutes;
+
+      if (startTotal >= endTotal) {
+        return res.status(400).json({
+          success: false,
+          message: 'Start time must be before end time for each availability slot'
+        });
+      }
+    }
+
     const user = await User.findById(userId);
     if (!user) {
       return res.status(404).json({
@@ -167,9 +206,28 @@ exports.completeProfile = async (req, res) => {
       creditNumber: 0
     });
 
+    const otpCode = generateOTP();
+    await OTP.create({
+      email: user.email.toLowerCase(),
+      code: otpCode,
+      type: 'verification',
+      expiresAt: new Date(Date.now() + 10 * 60 * 1000) 
+    });
+
+    try {
+      await sendOTPEmail(user.email, otpCode);
+    } catch (emailError) {
+      console.error('Error sending OTP email:', emailError);
+      return res.status(500).json({
+        success: false,
+        message: 'Profile created successfully but failed to send OTP email. Please use resend OTP.',
+        data: profile
+      });
+    }
+
     res.status(201).json({
       success: true,
-      message: 'Profile created successfully',
+      message: 'Profile created successfully. OTP sent to email.',
       data: profile
     });
   } catch (error) {
@@ -272,7 +330,14 @@ exports.resendOTP = async (req, res) => {
       });
     }
 
-    
+    const profile = await Profile.findOne({ userId: user._id });
+    if (!profile) {
+      return res.status(400).json({
+        success: false,
+        message: 'Please complete your profile first before requesting OTP'
+      });
+    }
+
     const otpCode = generateOTP();
     await OTP.create({
       email: email.toLowerCase(),
@@ -482,4 +547,3 @@ exports.resetPassword = async (req, res) => {
     });
   }
 };
-

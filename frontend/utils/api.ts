@@ -1,10 +1,23 @@
-const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || 'http://localhost:4000/api/auth';
+const AUTH_BASE_URL = import.meta.env.VITE_API_BASE_URL || 'http://localhost:4000/api/auth';
+const API_ROOT_URL = AUTH_BASE_URL.replace(/\/auth$/, '');
 
 interface ApiResponse<T = any> {
   success: boolean;
   message?: string;
   data?: T;
   error?: string;
+}
+
+export interface BrowseSkillResult {
+  id: string;
+  profileId: string;
+  name: string;
+  email: string;
+  teachSkills: string[];
+  learnSkills: string[];
+  availability?: string;
+  profilePic?: string | null;
+  isVerified?: boolean;
 }
 
 async function apiRequest<T>(
@@ -23,7 +36,7 @@ async function apiRequest<T>(
   }
 
   try {
-    const response = await fetch(`${API_BASE_URL}${endpoint}`, {
+    const response = await fetch(`${AUTH_BASE_URL}${endpoint}`, {
       ...options,
       headers,
     });
@@ -151,7 +164,7 @@ export const authApi = {
     lastName?: string;
     dob?: string;
     about?: string;
-    availability?: string;
+    availability?: Array<{ startTime: string; endTime: string; days: string[] }> | string;
     teachSkills?: string[];
     learnSkills?: string[];
     socialLinks?: string[];
@@ -161,6 +174,272 @@ export const authApi = {
       method: 'PUT',
       body: JSON.stringify(data),
     });
+  },
+
+  deleteAccount: async (data: { password: string; reason: string }) => {
+    return apiRequest('/account', {
+      method: 'DELETE',
+      body: JSON.stringify(data),
+    });
+  },
+
+  getAllSkills: async () => {
+    try {
+      const url = `${API_ROOT_URL}/skills/list`;
+      console.log('Fetching skills from URL:', url);
+      const response = await fetch(url, {
+        method: 'GET',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+      });
+      console.log('Skills API response status:', response.status, response.statusText);
+      const data = await response.json();
+      console.log('Skills API raw data:', data);
+      if (!response.ok) {
+        console.error('Skills API error response:', data);
+        return {
+          success: false,
+          message: data.message || 'Failed to fetch skills',
+          error: data.error,
+        };
+      }
+      const result = {
+        success: true,
+        ...data,
+      };
+      console.log('Skills API result:', result);
+      return result;
+    } catch (error: any) {
+      console.error('Skills API fetch error:', error);
+      return {
+        success: false,
+        message: error.message || 'Network error occurred',
+        error: error.toString(),
+      };
+    }
+  },
+
+  browseSkills: async (search?: string) => {
+    const query = search ? `?search=${encodeURIComponent(search)}` : '';
+    try {
+      const token = localStorage.getItem('token');
+      const headers: HeadersInit = {
+        'Content-Type': 'application/json',
+      };
+      if (token) {
+        headers.Authorization = `Bearer ${token}`;
+      }
+
+      const response = await fetch(`${API_ROOT_URL}/skills${query}`, {
+        method: 'GET',
+        headers,
+      });
+      const data = await response.json();
+      if (!response.ok) {
+        return {
+          success: false,
+          message: data.message || 'Failed to fetch skills',
+          error: data.error,
+        };
+      }
+      return {
+        success: true,
+        ...data,
+      };
+    } catch (error: any) {
+      return {
+        success: false,
+        message: error.message || 'Network error occurred',
+        error: error.toString(),
+      };
+    }
+  },
+};
+
+export const supportApi = {
+  submitIssue: async (data: { category: string; description: string; attachment?: string | null }) => {
+    try {
+      const token = localStorage.getItem('token');
+      const headers: HeadersInit = {
+        'Content-Type': 'application/json',
+      };
+      if (token) {
+        headers.Authorization = `Bearer ${token}`;
+      }
+
+      const response = await fetch(`${API_ROOT_URL}/support/submit`, {
+        method: 'POST',
+        headers,
+        body: JSON.stringify(data),
+      });
+      const result = await response.json();
+      if (!response.ok) {
+        return {
+          success: false,
+          message: result.message || 'Failed to submit issue',
+          error: result.error,
+        };
+      }
+      return {
+        success: true,
+        ...result,
+      };
+    } catch (error: any) {
+      return {
+        success: false,
+        message: error.message || 'Network error occurred',
+        error: error.toString(),
+      };
+    }
+  },
+
+  getAllIssues: async (status?: string, category?: string, search?: string) => {
+    try {
+      const token = localStorage.getItem('token');
+      const headers: HeadersInit = {
+        'Content-Type': 'application/json',
+      };
+      if (token) {
+        headers.Authorization = `Bearer ${token}`;
+      }
+
+      const params = new URLSearchParams();
+      if (status) params.append('status', status);
+      if (category) params.append('category', category);
+      if (search) params.append('search', search);
+      const query = params.toString() ? `?${params.toString()}` : '';
+
+      const response = await fetch(`${API_ROOT_URL}/support/issues${query}`, {
+        method: 'GET',
+        headers,
+      });
+      const result = await response.json();
+      if (!response.ok) {
+        return {
+          success: false,
+          message: result.message || 'Failed to fetch issues',
+          error: result.error,
+        };
+      }
+      return {
+        success: true,
+        ...result,
+      };
+    } catch (error: any) {
+      return {
+        success: false,
+        message: error.message || 'Network error occurred',
+        error: error.toString(),
+      };
+    }
+  },
+
+  getIssueComments: async (issueId: string) => {
+    try {
+      const token = localStorage.getItem('token');
+      const headers: HeadersInit = {
+        'Content-Type': 'application/json',
+      };
+      if (token) {
+        headers.Authorization = `Bearer ${token}`;
+      }
+
+      const response = await fetch(`${API_ROOT_URL}/support/issues/${issueId}/comments`, {
+        method: 'GET',
+        headers,
+      });
+      const result = await response.json();
+      if (!response.ok) {
+        return {
+          success: false,
+          message: result.message || 'Failed to fetch comments',
+          error: result.error,
+        };
+      }
+      return {
+        success: true,
+        ...result,
+      };
+    } catch (error: any) {
+      return {
+        success: false,
+        message: error.message || 'Network error occurred',
+        error: error.toString(),
+      };
+    }
+  },
+
+  addAdminComment: async (issueId: string, message: string) => {
+    try {
+      const token = localStorage.getItem('token');
+      const headers: HeadersInit = {
+        'Content-Type': 'application/json',
+      };
+      if (token) {
+        headers.Authorization = `Bearer ${token}`;
+      }
+
+      const response = await fetch(`${API_ROOT_URL}/support/issues/${issueId}/comments`, {
+        method: 'POST',
+        headers,
+        body: JSON.stringify({ message }),
+      });
+      const result = await response.json();
+      if (!response.ok) {
+        return {
+          success: false,
+          message: result.message || 'Failed to add comment',
+          error: result.error,
+        };
+      }
+      return {
+        success: true,
+        ...result,
+      };
+    } catch (error: any) {
+      return {
+        success: false,
+        message: error.message || 'Network error occurred',
+        error: error.toString(),
+      };
+    }
+  },
+
+  updateIssueStatus: async (issueId: string, status: 'pending' | 'resolved') => {
+    try {
+      const token = localStorage.getItem('token');
+      const headers: HeadersInit = {
+        'Content-Type': 'application/json',
+      };
+      if (token) {
+        headers.Authorization = `Bearer ${token}`;
+      }
+
+      const response = await fetch(`${API_ROOT_URL}/support/issues/${issueId}/status`, {
+        method: 'PATCH',
+        headers,
+        body: JSON.stringify({ status }),
+      });
+      const result = await response.json();
+      if (!response.ok) {
+        return {
+          success: false,
+          message: result.message || 'Failed to update status',
+          error: result.error,
+        };
+      }
+      return {
+        success: true,
+        ...result,
+      };
+    } catch (error: any) {
+      return {
+        success: false,
+        message: error.message || 'Network error occurred',
+        error: error.toString(),
+      };
+    }
   },
 };
 

@@ -5,15 +5,7 @@ import { useState, useEffect } from "react"
 import { Page, type Navigation } from "../App"
 import { SearchIcon } from "./icons/MiscIcons"
 import { CloseIcon } from "./icons/MenuIcons"
-
-interface SearchResult {
-  id: string
-  name: string
-  skill: string
-  img: string
-  rating?: number
-  reviews?: number
-}
+import { authApi, type BrowseSkillResult } from "../utils/api"
 
 interface SearchSkillsModalProps {
   isOpen: boolean
@@ -23,31 +15,62 @@ interface SearchSkillsModalProps {
 
 const SearchSkillsModal: React.FC<SearchSkillsModalProps> = ({ isOpen, onClose, navigation }) => {
   const [searchQuery, setSearchQuery] = useState("")
-  const [searchResults, setSearchResults] = useState<SearchResult[]>([])
-
-  const allUsers: SearchResult[] = [
-    { id: "1", name: "Ayesha Rana", skill: "JS, React", img: "/asset/p1.jfif", rating: 4.8, reviews: 47 },
-    { id: "2", name: "Ali Khan", skill: "C++, Python", img: "/asset/p2.png", rating: 4.9, reviews: 52 },
-    { id: "3", name: "Jaweria Rehman", skill: "UI/UX, Figma", img: "/asset/p3.jpg", rating: 4.7, reviews: 38 },
-    { id: "4", name: "Ahmad Khan", skill: "SQL, Databases", img: "/asset/p4.jpg", rating: 4.6, reviews: 29 },
-    { id: "5", name: "Emaan Fatima", skill: "Data Science, ML", img: "/asset/p1.jfif", rating: 4.9, reviews: 61 },
-    { id: "6", name: "Arsal Arham", skill: "Web Dev, Node.js", img: "/asset/p2.png", rating: 4.8, reviews: 43 },
-    { id: "7", name: "Fatima Ali", skill: "Python, Django", img: "/asset/p3.jpg", rating: 4.7, reviews: 35 },
-    { id: "8", name: "Issa Khan", skill: "Mobile Dev, Flutter", img: "/asset/p4.jpg", rating: 4.8, reviews: 45 },
-  ]
+  const [searchResults, setSearchResults] = useState<BrowseSkillResult[]>([])
+  const [isLoading, setIsLoading] = useState(false)
+  const [errorMessage, setErrorMessage] = useState("")
 
   useEffect(() => {
-    if (searchQuery.trim()) {
-      const filtered = allUsers.filter(
-        (user) =>
-          user.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
-          user.skill.toLowerCase().includes(searchQuery.toLowerCase()),
-      )
-      setSearchResults(filtered)
-    } else {
+    if (!isOpen) {
+      setSearchQuery("")
       setSearchResults([])
+      setErrorMessage("")
+      setIsLoading(false)
     }
-  }, [searchQuery])
+  }, [isOpen])
+
+  useEffect(() => {
+    if (!isOpen) return
+
+    const trimmedQuery = searchQuery.trim()
+    if (!trimmedQuery) {
+      setSearchResults([])
+      setErrorMessage("")
+      setIsLoading(false)
+      return
+    }
+
+    let isCancelled = false
+    setIsLoading(true)
+    setErrorMessage("")
+
+    const timeoutId = window.setTimeout(async () => {
+      try {
+        const response = await authApi.browseSkills(trimmedQuery)
+        if (isCancelled) return
+
+        if (response.success && Array.isArray(response.data)) {
+          setSearchResults(response.data)
+        } else {
+          setSearchResults([])
+          setErrorMessage(response.message || "No results found.")
+        }
+      } catch (error) {
+        if (!isCancelled) {
+          setSearchResults([])
+          setErrorMessage("Failed to fetch results. Please try again.")
+        }
+      } finally {
+        if (!isCancelled) {
+          setIsLoading(false)
+        }
+      }
+    }, 300)
+
+    return () => {
+      isCancelled = true
+      clearTimeout(timeoutId)
+    }
+  }, [searchQuery, isOpen])
 
   const handleUserSelect = (userId: string) => {
     // Store selected user ID in sessionStorage to pass to ViewProfilePage
@@ -95,6 +118,14 @@ const SearchSkillsModal: React.FC<SearchSkillsModalProps> = ({ isOpen, onClose, 
               <div className="p-8 text-center text-gray-500">
                 <p>Start typing to search for skills or tutors...</p>
               </div>
+            ) : isLoading ? (
+              <div className="p-8 text-center text-gray-500">
+                <p>Searching for "{searchQuery}"...</p>
+              </div>
+            ) : errorMessage ? (
+              <div className="p-8 text-center text-red-500">
+                <p>{errorMessage}</p>
+              </div>
             ) : searchResults.length === 0 ? (
               <div className="p-8 text-center text-gray-500">
                 <p>No results found for "{searchQuery}"</p>
@@ -108,16 +139,21 @@ const SearchSkillsModal: React.FC<SearchSkillsModalProps> = ({ isOpen, onClose, 
                     className="p-4 hover:bg-gray-50 cursor-pointer transition-colors flex items-center gap-4"
                   >
                     <img
-                      src={result.img || "/placeholder.svg"}
+                      src={result.profilePic || "/asset/user1.jpg"}
                       alt={result.name}
                       className="w-12 h-12 rounded-full object-cover"
                     />
                     <div className="flex-1">
                       <h3 className="font-semibold text-gray-800">{result.name}</h3>
-                      <p className="text-sm text-gray-600">Teaches: {result.skill}</p>
-                      {result.rating && (
+                      <p className="text-sm text-gray-600">
+                        Teaches:{" "}
+                        {result.teachSkills && result.teachSkills.length > 0
+                          ? result.teachSkills.slice(0, 3).join(", ")
+                          : "N/A"}
+                      </p>
+                      {result.learnSkills && result.learnSkills.length > 0 && (
                         <p className="text-xs text-gray-500 mt-1">
-                          ★ {result.rating} ({result.reviews} reviews)
+                          Learning: {result.learnSkills.slice(0, 2).join(", ")}
                         </p>
                       )}
                     </div>

@@ -1,7 +1,7 @@
 "use client"
 
 import type React from "react"
-import { useState } from "react"
+import { useState, useEffect } from "react"
 import { MessageCircle, Search, Send, Check, ArrowLeft } from "lucide-react"
 
 interface Ticket {
@@ -9,6 +9,7 @@ interface Ticket {
   type: "dispute" | "query" | "complaint"
   title: string
   description: string
+  attachment?: string | null
   userName: string
   userInitial: string
   userImage?: string
@@ -29,11 +30,6 @@ interface Comment {
   image?: string
 }
 
-interface Template {
-  id: string
-  name: string
-  text: string
-}
 
 const Avatar = ({ image, initial, name }: { image?: string; initial: string; name: string }) => {
   const [imageError, setImageError] = useState(false)
@@ -56,13 +52,18 @@ const Avatar = ({ image, initial, name }: { image?: string; initial: string; nam
   )
 }
 
+const API_ROOT_URL = import.meta.env.VITE_API_BASE_URL?.replace(/\/auth$/, '') || 'http://localhost:4000/api';
+
 export default function Support() {
-  const [selectedTicket, setSelectedTicket] = useState<string>("1")
+  const [selectedTicket, setSelectedTicket] = useState<string>("")
   const [activeTab, setActiveTab] = useState<string>("all")
   const [searchTerm, setSearchTerm] = useState("")
   const [replyMessage, setReplyMessage] = useState("")
-  const [selectedTemplate, setSelectedTemplate] = useState<Template | null>(null)
   const [showDetail, setShowDetail] = useState(false)
+  const [isSendingReply, setIsSendingReply] = useState(false)
+  const [tickets, setTickets] = useState<Ticket[]>([])
+  const [isLoading, setIsLoading] = useState(true)
+  const [error, setError] = useState<string>("")
   const [comments, setComments] = useState<Record<string, Comment[]>>({
     "1": [
       {
@@ -148,101 +149,105 @@ export default function Support() {
       },
     ],
   })
-  const [ticketStatuses, setTicketStatuses] = useState<Record<string, "pending" | "resolved">>({
-    "1": "pending",
-    "2": "pending",
-    "3": "pending",
-    "4": "pending",
-    "5": "resolved",
-  })
+  const [ticketStatuses, setTicketStatuses] = useState<Record<string, "pending" | "resolved">>({})
 
-  const [tickets, setTickets] = useState<Ticket[]>([
-    {
-      id: "1",
-      type: "query",
-      title: "Payment not processed for Premium",
-      description:
-        "I tried to upgrade to Premium yesterday but the amount was deducted and my plan is still Basic. Please help.",
-      userName: "Ali Khan",
-      userInitial: "A",
-      userImage: "https://api.dicebear.com/7.x/avataaars/svg?seed=Ali",
-      status: "pending",
-      date: "2023-10-25",
-      time: "09:30 AM",
-      priority: "high",
-    },
-    {
-      id: "2",
-      type: "dispute",
-      title: "Provider did not show up",
-      description:
-        "I booked a plumber (ID #55) for 2 PM. He never showed up and is not picking up calls. I want a refund of my credits.",
-      userName: "Zainab Ali",
-      userInitial: "Z",
-      userImage: "https://api.dicebear.com/7.x/avataaars/svg?seed=Zainab",
-      status: "pending",
-      date: "2023-10-24",
-      time: "02:15 PM",
-      priority: "high",
-    },
-    {
-      id: "3",
-      type: "query",
-      title: "Account restriction appeal",
-      description: "My account was restricted. I want to appeal this decision and understand the reason.",
-      userName: "Hassan Ahmed",
-      userInitial: "H",
-      userImage: "https://api.dicebear.com/7.x/avataaars/svg?seed=Hassan",
-      status: "pending",
-      date: "2023-10-20",
-      time: "11:45 AM",
-      priority: "medium",
-    },
-    {
-      id: "4",
-      type: "complaint",
-      title: "Poor service quality",
-      description: "The service was not up to the standard promised. Looking for compensation.",
-      userName: "Fatima Khan",
-      userInitial: "F",
-      userImage: "https://api.dicebear.com/7.x/avataaars/svg?seed=Fatima",
-      status: "pending",
-      date: "2023-10-19",
-      time: "03:20 PM",
-      priority: "medium",
-    },
-    {
-      id: "5",
-      type: "dispute",
-      title: "Billing discrepancy",
-      description: "I was charged twice for the same service. Please investigate.",
-      userName: "Bilal Ahmed",
-      userInitial: "B",
-      userImage: "https://api.dicebear.com/7.x/avataaars/svg?seed=Bilal",
-      status: "resolved",
-      date: "2023-10-18",
-      time: "10:00 AM",
-      priority: "high",
-    },
-  ])
+  // Fetch issues from backend
+  useEffect(() => {
+    const fetchIssues = async () => {
+      try {
+        setIsLoading(true)
+        const token = localStorage.getItem('token')
+        const status = activeTab === 'all' ? undefined : activeTab
+        const params = new URLSearchParams()
+        if (status) params.append('status', status)
+        if (searchTerm.trim()) params.append('search', searchTerm.trim())
+        const query = params.toString() ? `?${params.toString()}` : ''
 
-  const templates: Template[] = [
-    {
-      id: "1",
-      name: "Request Approved",
-      text: "Your request has been approved. We will process this immediately and you will receive confirmation within 24 hours. Thank you for your patience.",
-    },
-    {
-      id: "2",
-      name: "More Info Required ",
-      text: "Thank you for bringing this to our attention. We need some additional information to investigate this matter further. Could you please provide: user ID, screen shots, and any supporting documents? This will help us resolve your issue faster.",
-    },
-    {
-      id: "3",
-      name: "Insufficient Evidence",
-      text: "We have reviewed your complaint. Unfortunately, we do not have sufficient evidence to proceed at this time. Please provide additional documentation or proof to support your claim, such as screenshots, receipts, or communication records.",
-    },
-  ]
+        const response = await fetch(`${API_ROOT_URL}/support/issues${query}`, {
+          method: 'GET',
+          headers: {
+            'Content-Type': 'application/json',
+            ...(token ? { Authorization: `Bearer ${token}` } : {}),
+          },
+        })
+
+        const data = await response.json()
+        console.log('Admin Support - API Response:', data)
+        console.log('Admin Support - Response status:', response.status)
+        
+        if (!response.ok) {
+          setError(data.message || `Failed to fetch issues (${response.status})`)
+          console.error('Admin Support - API Error:', data)
+          if (response.status === 401) {
+            setError('Authentication required. Please login.')
+          }
+          setTickets([])
+        } else if (data.success && Array.isArray(data.data)) {
+          setError("")
+          setTickets(data.data)
+          // Initialize statuses
+          const statusMap: Record<string, "pending" | "resolved"> = {}
+          data.data.forEach((ticket: Ticket) => {
+            statusMap[ticket.id] = ticket.status
+          })
+          setTicketStatuses(statusMap)
+          // Select first ticket if available and none selected
+          if (data.data.length > 0 && (!selectedTicket || !data.data.find((t: Ticket) => t.id === selectedTicket))) {
+            setSelectedTicket(data.data[0].id)
+          } else if (data.data.length === 0) {
+            setSelectedTicket("")
+          }
+        } else {
+          console.error('Admin Support - Unexpected response format:', data)
+          setError(data.message || 'Unexpected response format')
+          setTickets([])
+        }
+      } catch (error: any) {
+        console.error('Error fetching issues:', error)
+        setError(`Network error: ${error.message || 'Failed to connect to server'}`)
+        setTickets([])
+      } finally {
+        setIsLoading(false)
+      }
+    }
+
+    // Debounce search
+    const timeoutId = setTimeout(() => {
+      fetchIssues()
+    }, searchTerm ? 500 : 0)
+
+    return () => clearTimeout(timeoutId)
+  }, [activeTab, searchTerm])
+
+  // Fetch comments when ticket is selected
+  useEffect(() => {
+    if (!selectedTicket) return
+
+    const fetchComments = async () => {
+      try {
+        const token = localStorage.getItem('token')
+        const response = await fetch(`${API_ROOT_URL}/support/issues/${selectedTicket}/comments`, {
+          method: 'GET',
+          headers: {
+            'Content-Type': 'application/json',
+            ...(token ? { Authorization: `Bearer ${token}` } : {}),
+          },
+        })
+
+        const data = await response.json()
+        if (data.success && Array.isArray(data.data)) {
+          setComments((prev) => ({
+            ...prev,
+            [selectedTicket]: data.data,
+          }))
+        }
+      } catch (error) {
+        console.error('Error fetching comments:', error)
+      }
+    }
+
+    fetchComments()
+  }, [selectedTicket])
 
   const getTypeColor = (type: string) => {
     switch (type) {
@@ -268,70 +273,85 @@ export default function Support() {
     }
   }
 
-  const filteredTickets = tickets.filter((ticket) => {
-    const matchesSearch =
-      ticket.title.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      ticket.description.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      ticket.userName.toLowerCase().includes(searchTerm.toLowerCase())
-
-    const matchesTab = activeTab === "all" || ticketStatuses[ticket.id] === activeTab
-    return matchesSearch && matchesTab
-  })
+  // Filtering is now done on the backend, but we can add client-side filtering for search
+  const filteredTickets = tickets
 
   const currentTicket = tickets.find((t) => t.id === selectedTicket)
   const currentComments = comments[selectedTicket] || []
   const currentStatus = ticketStatuses[selectedTicket] || "pending"
 
-  const handleTemplateClick = (template: Template) => {
-    const now = new Date()
-    const newComment: Comment = {
-      id: String(Date.now()),
-      author: "Support Team",
-      role: "admin",
-      message: template.text,
-      date: now.toISOString().split("T")[0],
-      time: now.toLocaleTimeString("en-US", { hour: "2-digit", minute: "2-digit", hour12: true }),
-      avatar: "ST",
-      image: "https://api.dicebear.com/7.x/avataaars/svg?seed=Support",
-    }
+  const handleSendReply = async () => {
+    if (!replyMessage.trim() || !selectedTicket || isSendingReply) return
 
-    setComments((prev) => ({
-      ...prev,
-      [selectedTicket]: [...(prev[selectedTicket] || []), newComment],
-    }))
-    setReplyMessage("")
-    setSelectedTemplate(null)
+    setIsSendingReply(true)
+    try {
+      const token = localStorage.getItem('token')
+      const response = await fetch(`${API_ROOT_URL}/support/issues/${selectedTicket}/comments`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          ...(token ? { Authorization: `Bearer ${token}` } : {}),
+        },
+        body: JSON.stringify({ message: replyMessage }),
+      })
+
+      const data = await response.json()
+      if (data.success) {
+        // Refresh comments
+        const commentsResponse = await fetch(`${API_ROOT_URL}/support/issues/${selectedTicket}/comments`, {
+          method: 'GET',
+          headers: {
+            'Content-Type': 'application/json',
+            ...(token ? { Authorization: `Bearer ${token}` } : {}),
+          },
+        })
+        const commentsData = await commentsResponse.json()
+        if (commentsData.success && Array.isArray(commentsData.data)) {
+          setComments((prev) => ({
+            ...prev,
+            [selectedTicket]: commentsData.data,
+          }))
+        }
+        setReplyMessage("")
+      } else {
+        alert(data.message || 'Failed to send reply')
+      }
+    } catch (error) {
+      console.error('Error sending reply:', error)
+      alert('Failed to send reply. Please try again.')
+    } finally {
+      setIsSendingReply(false)
+    }
   }
 
-  const handleSendReply = () => {
-    if (!replyMessage.trim()) return
+  const handleMarkResolved = async () => {
+    if (!selectedTicket) return
 
-    const now = new Date()
-    const newComment: Comment = {
-      id: String(Date.now()),
-      author: "Support Team",
-      role: "admin",
-      message: replyMessage,
-      date: now.toISOString().split("T")[0],
-      time: now.toLocaleTimeString("en-US", { hour: "2-digit", minute: "2-digit", hour12: true }),
-      avatar: "ST",
-      image: "https://api.dicebear.com/7.x/avataaars/svg?seed=Support",
+    try {
+      const token = localStorage.getItem('token')
+      const response = await fetch(`${API_ROOT_URL}/support/issues/${selectedTicket}/status`, {
+        method: 'PATCH',
+        headers: {
+          'Content-Type': 'application/json',
+          ...(token ? { Authorization: `Bearer ${token}` } : {}),
+        },
+        body: JSON.stringify({ status: 'resolved' }),
+      })
+
+      const data = await response.json()
+      if (data.success) {
+        setTicketStatuses((prev) => ({
+          ...prev,
+          [selectedTicket]: "resolved",
+        }))
+        setTickets((prev) => prev.map((t) => (t.id === selectedTicket ? { ...t, status: "resolved" as const } : t)))
+      } else {
+        alert(data.message || 'Failed to update status')
+      }
+    } catch (error) {
+      console.error('Error updating status:', error)
+      alert('Failed to update status. Please try again.')
     }
-
-    setComments((prev) => ({
-      ...prev,
-      [selectedTicket]: [...(prev[selectedTicket] || []), newComment],
-    }))
-    setReplyMessage("")
-    setSelectedTemplate(null)
-  }
-
-  const handleMarkResolved = () => {
-    setTicketStatuses((prev) => ({
-      ...prev,
-      [selectedTicket]: "resolved",
-    }))
-    setTickets((prev) => prev.map((t) => (t.id === selectedTicket ? { ...t, status: "resolved" as const } : t)))
   }
 
   const handleTicketClick = (ticketId: string) => {
@@ -378,10 +398,20 @@ export default function Support() {
 
           {/* Tickets List */}
           <div className="flex-1 overflow-y-auto space-y-3 p-3 md:p-4">
-            {filteredTickets.length === 0 ? (
+            {error && (
+              <div className="p-4 mb-4 bg-red-50 border border-red-200 rounded-lg">
+                <p className="text-sm text-red-600">{error}</p>
+              </div>
+            )}
+            {isLoading ? (
+              <div className="p-8 text-center text-gray-500">
+                <p className="text-sm font-medium">Loading tickets...</p>
+              </div>
+            ) : filteredTickets.length === 0 ? (
               <div className="p-8 text-center text-gray-500">
                 <MessageCircle className="w-12 h-12 mx-auto mb-2 opacity-30" />
                 <p className="text-sm font-medium">No tickets found</p>
+                {!error && <p className="text-xs mt-2">Issues submitted from the Help Center will appear here.</p>}
               </div>
             ) : (
               filteredTickets.map((ticket) => (
@@ -451,10 +481,45 @@ export default function Support() {
 
               {/* Message Area */}
               <div className="flex-1 overflow-y-auto p-3 md:p-6 space-y-4 bg-gray-50">
+                {/* Original Ticket Message */}
+                {currentTicket && (
+                  <div className="flex gap-3">
+                    <div className="w-8 h-8 md:w-10 md:h-10 flex-shrink-0 rounded-full overflow-hidden">
+                      <Avatar image={currentTicket.userImage} initial={currentTicket.userInitial} name={currentTicket.userName} />
+                    </div>
+                    <div className="flex-1">
+                      <div className="flex items-center gap-2 mb-1 flex-wrap">
+                        <p className="font-bold text-xs md:text-sm text-gray-900">{currentTicket.userName}</p>
+                        <span className="text-xs px-2 py-0.5 rounded-full font-semibold bg-gray-300 text-gray-700">
+                          User
+                        </span>
+                        <p className="text-xs text-gray-500">
+                          {currentTicket.date} {currentTicket.time}
+                        </p>
+                      </div>
+                      <div className="inline-block rounded-lg p-3 bg-white border border-gray-200">
+                        <p className="text-xs md:text-sm mb-2">{currentTicket.description}</p>
+                        {currentTicket.attachment && (
+                          <div className="mt-3 pt-3 border-t border-gray-200">
+                            <p className="text-xs font-semibold text-gray-700 mb-2">Attachment:</p>
+                            <img 
+                              src={currentTicket.attachment} 
+                              alt="Issue attachment" 
+                              className="max-w-full max-h-64 rounded-lg border border-gray-300 cursor-pointer hover:opacity-90"
+                              onClick={() => window.open(currentTicket.attachment || '', '_blank')}
+                            />
+                          </div>
+                        )}
+                      </div>
+                    </div>
+                  </div>
+                )}
+
+                {/* Admin Comments */}
                 {currentComments.length === 0 ? (
                   <div className="text-center py-8 text-gray-500">
                     <MessageCircle className="w-12 h-12 mx-auto mb-3 opacity-20" />
-                    <p className="text-sm">No messages yet</p>
+                    <p className="text-sm">No admin replies yet</p>
                   </div>
                 ) : (
                   currentComments.map((comment) => (
@@ -494,35 +559,28 @@ export default function Support() {
                 )}
               </div>
 
-              {/* Templates & Reply Input */}
+              {/* Reply Input */}
               <div className="p-3 md:p-4 border-t border-gray-200 bg-white space-y-3">
-                <div className="flex flex-wrap gap-2">
-                  {templates.map((template) => (
-                    <button
-                      key={template.id}
-                      onClick={() => handleTemplateClick(template)}
-                      className="text-xs font-medium px-2.5 md:px-3 py-1.5 rounded-lg border-2 border-gray-300 text-gray-700 hover:border-[#0E4B5B] hover:text-[#0E4B5B] transition-all"
-                    >
-                      {template.name}
-                    </button>
-                  ))}
-                </div>
-
-                {/* Reply Input */}
                 <div className="flex gap-2">
                   <input
                     type="text"
                     placeholder="Type your response..."
                     value={replyMessage}
                     onChange={(e) => setReplyMessage(e.target.value)}
-                    onKeyPress={(e) => e.key === "Enter" && handleSendReply()}
-                    className="flex-1 px-3 md:px-4 py-2.5 md:py-3 rounded-lg border-2 border-gray-200 focus:outline-none focus:border-[#0E4B5B] text-sm"
+                    onKeyPress={(e) => e.key === "Enter" && !isSendingReply && handleSendReply()}
+                    disabled={isSendingReply}
+                    className="flex-1 px-3 md:px-4 py-2.5 md:py-3 rounded-lg border-2 border-gray-200 focus:outline-none focus:border-[#0E4B5B] text-sm disabled:opacity-50 disabled:cursor-not-allowed"
                   />
                   <button
                     onClick={handleSendReply}
-                    className="px-3 md:px-4 py-2.5 md:py-3 bg-[#0E4B5B] hover:bg-[#093540] text-white rounded-lg font-bold transition-colors flex items-center justify-center"
+                    disabled={isSendingReply || !replyMessage.trim()}
+                    className="px-3 md:px-4 py-2.5 md:py-3 bg-[#0E4B5B] hover:bg-[#093540] text-white rounded-lg font-bold transition-colors flex items-center justify-center disabled:opacity-50 disabled:cursor-not-allowed"
                   >
-                    <Send size={18} />
+                    {isSendingReply ? (
+                      <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin"></div>
+                    ) : (
+                      <Send size={18} />
+                    )}
                   </button>
                 </div>
 

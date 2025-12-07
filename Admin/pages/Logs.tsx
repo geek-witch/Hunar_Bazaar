@@ -16,7 +16,7 @@ export const LogsPage: React.FC = () => {
   return (
     <div className="space-y-6">
       <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
-        <h2 className="text-xl font-bold text-tale-green flex items-center gap-2">
+        <h2 className="text-xl font-bold text-white flex items-center gap-2">
           <Terminal size={24} /> System Logs
         </h2>
         <button className="flex items-center gap-2 px-4 py-2 bg-[#E6EEF9] border border-blue-200 rounded-lg text-sm font-medium text-[#0E4B5B] hover:bg-white shadow-sm w-full sm:w-auto justify-center">

@@ -12,9 +12,10 @@ const transporter = nodemailer.createTransport({
 
 transporter.verify(function(error, success) {
   if (error) {
-    console.log('Email service error:', error);
+    console.error('✗ Email service configuration error:', error);
+    console.error('Please check your EMAIL_HOST, EMAIL_PORT, EMAIL_USER, and EMAIL_PASSWORD environment variables.');
   } else {
-    console.log('Email service is ready to send messages');
+    console.log(`Email configured: ${process.env.EMAIL_USER || 'EMAIL_USER not set'}`);
   }
 });
 
@@ -40,7 +41,6 @@ const sendOTPEmail = async (email, otpCode) => {
 
   try {
     const info = await transporter.sendMail(mailOptions);
-    console.log('OTP email sent:', info.messageId);
     return { success: true, messageId: info.messageId };
   } catch (error) {
     console.error('Error sending OTP email:', error);
@@ -70,8 +70,133 @@ const sendPasswordResetEmail = async (email, resetToken) => {
   return transporter.sendMail(mailOptions);
 };
 
+const sendContactEmail = async (contactData) => {
+  const { name, email, phone, subject, message } = contactData;
+  const recipientEmail = process.env.CONTACT_EMAIL || process.env.EMAIL_USER;
+
+  const mailOptions = {
+    from: `"Hunar Bazaar Contact Form" <${process.env.EMAIL_USER}>`,
+    to: recipientEmail,
+    replyTo: email,
+    subject: `Contact Form: ${subject}`,
+    html: `
+      <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; padding: 20px;">
+        <h2 style="color: #14b8a6; border-bottom: 2px solid #14b8a6; padding-bottom: 10px;">
+          New Contact Form Submission
+        </h2>
+        
+        <div style="background-color: #f0fdfa; border-left: 4px solid #14b8a6; padding: 15px; margin: 20px 0;">
+          <p style="margin: 8px 0;"><strong style="color: #14b8a6;">Name:</strong> ${name}</p>
+          <p style="margin: 8px 0;"><strong style="color: #14b8a6;">Email:</strong> <a href="mailto:${email}" style="color: #14b8a6;">${email}</a></p>
+          ${phone ? `<p style="margin: 8px 0;"><strong style="color: #14b8a6;">Phone:</strong> ${phone}</p>` : ''}
+          <p style="margin: 8px 0;"><strong style="color: #14b8a6;">Subject:</strong> ${subject}</p>
+        </div>
+        
+        <div style="background-color: #ffffff; border: 1px solid #e5e7eb; border-radius: 8px; padding: 20px; margin: 20px 0;">
+          <h3 style="color: #14b8a6; margin-top: 0;">Message:</h3>
+          <p style="color: #374151; line-height: 1.6; white-space: pre-wrap;">${message}</p>
+        </div>
+        
+        <div style="margin-top: 30px; padding-top: 20px; border-top: 1px solid #e5e7eb; text-align: center;">
+          <p style="color: #6b7280; font-size: 12px;">
+            This email was sent from the Hunar Bazaar contact form.<br>
+            You can reply directly to this email to respond to ${name}.
+          </p>
+        </div>
+      </div>
+    `,
+    text: `
+New Contact Form Submission
+
+Name: ${name}
+Email: ${email}
+${phone ? `Phone: ${phone}` : ''}
+Subject: ${subject}
+
+Message:
+${message}
+
+---
+This email was sent from the Hunar Bazaar contact form.
+You can reply directly to this email to respond to ${name}.
+    `
+  };
+
+  try {
+    const info = await transporter.sendMail(mailOptions);
+    return { success: true, messageId: info.messageId };
+  } catch (error) {
+    console.error('Error sending contact email:', error);
+    throw error;
+  }
+};
+
+const sendSupportReplyEmail = async (userEmail, userName, issueCategory, issueDescription, adminReply) => {
+  const mailOptions = {
+    from: `"Hunar Bazaar Support" <${process.env.EMAIL_USER}>`,
+    to: userEmail,
+    subject: `Re: Your Support Request - ${issueCategory}`,
+    html: `
+      <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; padding: 20px;">
+        <h2 style="color: #14b8a6; border-bottom: 2px solid #14b8a6; padding-bottom: 10px;">
+          Response to Your Support Request
+        </h2>
+        
+        <div style="background-color: #f0fdfa; border-left: 4px solid #14b8a6; padding: 15px; margin: 20px 0;">
+          <p style="margin: 8px 0;"><strong style="color: #14b8a6;">Category:</strong> ${issueCategory}</p>
+          <p style="margin: 8px 0;"><strong style="color: #14b8a6;">Your Original Message:</strong></p>
+          <p style="margin: 8px 0; color: #374151; background-color: #ffffff; padding: 10px; border-radius: 4px; white-space: pre-wrap;">${issueDescription}</p>
+        </div>
+        
+        <div style="background-color: #ffffff; border: 2px solid #14b8a6; border-radius: 8px; padding: 20px; margin: 20px 0;">
+          <h3 style="color: #14b8a6; margin-top: 0;">Our Response:</h3>
+          <p style="color: #374151; line-height: 1.6; white-space: pre-wrap;">${adminReply}</p>
+        </div>
+        
+        <div style="margin-top: 30px; padding-top: 20px; border-top: 1px solid #e5e7eb; text-align: center;">
+          <p style="color: #6b7280; font-size: 12px;">
+            If you have any further questions, please reply to this email or submit a new support request.<br>
+            © 2025 Hunar Bazaar. All rights reserved.
+          </p>
+        </div>
+      </div>
+    `,
+    text: `
+Response to Your Support Request
+
+Category: ${issueCategory}
+
+Your Original Message:
+${issueDescription}
+
+Our Response:
+${adminReply}
+
+---
+If you have any further questions, please reply to this email or submit a new support request.
+© 2025 Hunar Bazaar. All rights reserved.
+    `
+  };
+
+  try {
+    const info = await transporter.sendMail(mailOptions);
+    return { success: true, messageId: info.messageId };
+  } catch (error) {
+    console.error('Error sending support reply email:', error);
+    if (error.response) {
+      console.error('Email service response:', error.response);
+    }
+    if (error.code) {
+      console.error('Email error code:', error.code);
+    }
+    throw error;
+  }
+};
+
 module.exports = {
   sendOTPEmail,
-  sendPasswordResetEmail
+  sendPasswordResetEmail,
+  sendContactEmail,
+  sendSupportReplyEmail
 };
 

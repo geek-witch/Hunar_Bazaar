@@ -1,5 +1,7 @@
 const User = require('../models/User');
 const Profile = require('../models/Profile');
+const OTP = require('../models/OTP');
+const PasswordReset = require('../models/PasswordReset');
 
 exports.getProfile = async (req, res) => {
   try {
@@ -29,7 +31,7 @@ exports.getProfile = async (req, res) => {
         lastName: profile.lastName,
         dob: dobFormatted,
         about: profile.bio,
-        availability: profile.availability,
+        availability: profile.availability || [],
         teachSkills: profile.teachSkills,
         learnSkills: profile.learnSkills,
         credits: profile.creditNumber,
@@ -75,7 +77,62 @@ exports.updateProfile = async (req, res) => {
       }
       profile.bio = about;
     }
-    if (availability !== undefined) profile.availability = availability;
+    if (availability !== undefined) {
+      // Validate availability format if provided
+      if (!Array.isArray(availability) || availability.length === 0) {
+        return res.status(400).json({
+          success: false,
+          message: 'At least one availability slot is required'
+        });
+      }
+
+      const validDays = ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday', 'Sunday'];
+      const timeRegex = /^([0-1]?[0-9]|2[0-3]):[0-5][0-9]$/;
+
+      for (const slot of availability) {
+        if (!slot.startTime || !slot.endTime || !slot.days || !Array.isArray(slot.days)) {
+          return res.status(400).json({
+            success: false,
+            message: 'Each availability slot must have startTime, endTime, and days array'
+          });
+        }
+
+        if (!timeRegex.test(slot.startTime) || !timeRegex.test(slot.endTime)) {
+          return res.status(400).json({
+            success: false,
+            message: 'Time must be in HH:MM format (24-hour)'
+          });
+        }
+
+        if (slot.days.length === 0) {
+          return res.status(400).json({
+            success: false,
+            message: 'Each availability slot must have at least one day'
+          });
+        }
+
+        if (!slot.days.every(day => validDays.includes(day))) {
+          return res.status(400).json({
+            success: false,
+            message: 'Invalid day name. Valid days are: Monday, Tuesday, Wednesday, Thursday, Friday, Saturday, Sunday'
+          });
+        }
+
+        const [startHours, startMinutes] = slot.startTime.split(':').map(Number);
+        const [endHours, endMinutes] = slot.endTime.split(':').map(Number);
+        const startTotal = startHours * 60 + startMinutes;
+        const endTotal = endHours * 60 + endMinutes;
+
+        if (startTotal >= endTotal) {
+          return res.status(400).json({
+            success: false,
+            message: 'Start time must be before end time for each availability slot'
+          });
+        }
+      }
+
+      profile.availability = availability;
+    }
     if (teachSkills !== undefined) {
       if (teachSkills.length === 0) {
         return res.status(400).json({
@@ -117,6 +174,69 @@ exports.updateProfile = async (req, res) => {
     res.status(500).json({
       success: false,
       message: 'Error updating profile',
+      error: error.message
+    });
+  }
+};
+
+exports.deleteAccount = async (req, res) => {
+  try {
+    const userId = req.user?._id;
+    const { password, reason } = req.body;
+
+    if (!userId) {
+      return res.status(401).json({
+        success: false,
+        message: 'Unauthorized request'
+      });
+    }
+
+    if (!password) {
+      return res.status(400).json({
+        success: false,
+        message: 'Password is required to delete account'
+      });
+    }
+
+    const user = await User.findById(userId);
+    if (!user) {
+      return res.status(404).json({
+        success: false,
+        message: 'User not found'
+      });
+    }
+
+    const isPasswordValid = await user.comparePassword(password);
+    if (!isPasswordValid) {
+      return res.status(401).json({
+        success: false,
+        message: 'Incorrect password'
+      });
+    }
+
+    await Promise.all([
+      Profile.deleteOne({ userId }),
+      OTP.deleteMany({ email: user.email.toLowerCase() }),
+      PasswordReset.deleteMany({ userId })
+    ]);
+
+    await User.deleteOne({ _id: userId });
+    await Profile.deleteOne({ userId: userId })
+
+    console.info('Account deleted via profile controller', {
+      userId: userId.toString(),
+      reason: reason || 'Not provided'
+    });
+
+    res.status(200).json({
+      success: true,
+      message: 'Account deleted successfully'
+    });
+  } catch (error) {
+    console.error('Profile delete account error:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Error deleting account',
       error: error.message
     });
   }

@@ -68,8 +68,11 @@ const ContactUsPage: React.FC<{ navigation: Navigation }> = ({ navigation }) => 
         setErrors({});
         
         try {
-            // TODO: Replace with your actual API endpoint
-            const response = await fetch('/api/contact', {
+            const apiBaseUrl = import.meta.env.VITE_API_BASE_URL 
+                ? import.meta.env.VITE_API_BASE_URL.replace(/\/auth$/, '')
+                : 'http://localhost:4000/api';
+            
+            const response = await fetch(`${apiBaseUrl}/contact`, {
                 method: 'POST',
                 headers: {
                     'Content-Type': 'application/json',
@@ -77,33 +80,25 @@ const ContactUsPage: React.FC<{ navigation: Navigation }> = ({ navigation }) => 
                 body: JSON.stringify(formData),
             });
             
-            if (response.ok) {
+            const data = await response.json();
+            
+            if (response.ok && data.success) {
                 setStatus('success');
                 setFormData({ name: '', email: '', phone: '', subject: '', message: '' });
                 // clear form-related errors after a successful send
                 setErrors({});
                 setTimeout(() => setStatus('idle'), 5000);
             } else {
-                // If in development and endpoint isn't implemented, simulate success so you can test UI
-                if (import.meta && (import.meta as any).env && (import.meta as any).env.DEV) {
-                    console.warn('Contact API returned non-OK — simulating success in dev');
-                    setStatus('success');
-                    setFormData({ name: '', email: '', phone: '', subject: '', message: '' });
-                    setErrors({});
-                    setTimeout(() => setStatus('idle'), 5000);
-                } else {
-                    // Optionally parse server validation errors if returned
-                    try {
-                        const data = await response.json();
-                        if (data && typeof data === 'object' && data.errors) {
-                            setErrors(data.errors);
-                        }
-                    } catch (_) {
-                        // ignore parse errors
+                // Parse server validation errors if returned
+                if (data && typeof data === 'object') {
+                    if (data.errors) {
+                        setErrors(data.errors);
+                    } else if (data.message) {
+                        setErrors({ form: data.message });
                     }
-                    setStatus('error');
-                    setTimeout(() => setStatus('idle'), 5000);
                 }
+                setStatus('error');
+                setTimeout(() => setStatus('idle'), 5000);
             }
         } catch (error) {
             console.error('Error submitting form:', error);
@@ -248,7 +243,9 @@ const ContactUsPage: React.FC<{ navigation: Navigation }> = ({ navigation }) => 
                             
                             {status === 'error' && (
                                 <div className="mb-6 p-4 bg-red-50 border border-red-200 rounded-lg">
-                                    <p className="text-red-800">Oops! Something went wrong. Please try again.</p>
+                                    <p className="text-red-800">
+                                        {errors.form || 'Oops! Something went wrong. Please try again.'}
+                                    </p>
                                 </div>
                             )}
 

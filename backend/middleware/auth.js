@@ -47,3 +47,29 @@ exports.authenticate = async (req, res, next) => {
   }
 };
 
+exports.optionalAuthenticate = async (req, res, next) => {
+  try {
+    const authHeader = req.headers.authorization;
+    
+    if (!authHeader || !authHeader.startsWith('Bearer ')) {
+      return next();
+    }
+
+    const token = authHeader.substring(7);
+    
+    try {
+      const decoded = jwt.verify(token, process.env.JWT_SECRET);
+      const user = await User.findById(decoded.userId).select('-password');
+      if (user) {
+        req.user = user;
+      }
+    } catch (error) {
+
+    }
+    
+    next();
+  } catch (error) {
+    next();
+  }
+};
+

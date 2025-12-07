@@ -3,6 +3,7 @@
 import type React from "react"
 import { useState } from "react"
 import type { Navigation } from "../App"
+import { authApi } from "../utils/api"
 
 interface Settings {
   emailNotifications: boolean
@@ -52,6 +53,8 @@ const SettingsPage: React.FC<{ navigation: Navigation }> = ({ navigation }) => {
   const [deleteReason, setDeleteReason] = useState("")
   const [customReason, setCustomReason] = useState("")
   const [deletePassword, setDeletePassword] = useState("")
+  const [deleteError, setDeleteError] = useState("")
+  const [isDeletingAccount, setIsDeletingAccount] = useState(false)
 
   const [billingEmail, setBillingEmail] = useState("")
 
@@ -79,17 +82,59 @@ const SettingsPage: React.FC<{ navigation: Navigation }> = ({ navigation }) => {
     setTimeout(() => setSavedMessage(""), 3000)
   }
 
-  // Delete Account Logic
-  const handleDeleteAccount = () => {
-    const finalReason = deleteReason === "other" ? customReason : deleteReason
+  const resetDeleteForm = () => {
+    setDeleteReason("")
+    setCustomReason("")
+    setDeletePassword("")
+    setDeleteError("")
+  }
 
-    if (!finalReason || !deletePassword) return
+  const openDeleteModal = () => {
+    resetDeleteForm()
+    setShowDeleteModal(true)
+  }
 
-    console.log("Delete Requested", { reason: finalReason, time: new Date() })
-
-    localStorage.removeItem("token")
+  const closeDeleteModal = () => {
     setShowDeleteModal(false)
-    navigation.logout()
+    resetDeleteForm()
+  }
+
+  // Delete Account Logic
+  const handleDeleteAccount = async () => {
+    const finalReason = (deleteReason === "other" ? customReason : deleteReason)?.trim() || ""
+
+    if (!finalReason) {
+      setDeleteError("Please select or provide a reason.")
+      return
+    }
+
+    if (!deletePassword) {
+      setDeleteError("Please confirm your password.")
+      return
+    }
+
+    setIsDeletingAccount(true)
+    setDeleteError("")
+
+    try {
+      const response = await authApi.deleteAccount({
+        password: deletePassword,
+        reason: finalReason,
+      })
+
+      if (!response.success) {
+        setDeleteError(response.message || "Failed to delete account. Please try again.")
+        return
+      }
+
+      closeDeleteModal()
+      localStorage.removeItem("token")
+      navigation.logout()
+    } catch (error) {
+      setDeleteError("Unexpected error. Please try again.")
+    } finally {
+      setIsDeletingAccount(false)
+    }
   }
 
   const handleSelectChange = (key: keyof Settings, value: string) => {
@@ -224,7 +269,7 @@ const SettingsPage: React.FC<{ navigation: Navigation }> = ({ navigation }) => {
           Once you delete your account, there is no going back. Please be certain.
         </p>
         <button
-          onClick={() => setShowDeleteModal(true)}
+          onClick={openDeleteModal}
           className="bg-red-600 text-white py-2 px-6 rounded-lg hover:bg-red-700 font-medium"
         >
           Delete Account
@@ -245,7 +290,10 @@ const SettingsPage: React.FC<{ navigation: Navigation }> = ({ navigation }) => {
               <select
                 className="w-full border border-gray-300 rounded-lg p-2"
                 value={deleteReason}
-                onChange={(e) => setDeleteReason(e.target.value)}
+                onChange={(e) => {
+                  setDeleteReason(e.target.value)
+                  setDeleteError("")
+                }}
               >
                 <option value="">Select a reason</option>
                 <option value="not useful">I don't find the app useful</option>
@@ -263,7 +311,10 @@ const SettingsPage: React.FC<{ navigation: Navigation }> = ({ navigation }) => {
                   className="w-full border border-gray-300 rounded-lg p-2"
                   placeholder="Write your reason..."
                   value={customReason}
-                  onChange={(e) => setCustomReason(e.target.value)}
+                  onChange={(e) => {
+                    setCustomReason(e.target.value)
+                    setDeleteError("")
+                  }}
                 />
               </div>
             )}
@@ -275,23 +326,29 @@ const SettingsPage: React.FC<{ navigation: Navigation }> = ({ navigation }) => {
                 type="password"
                 className="w-full border border-gray-300 rounded-lg p-2"
                 value={deletePassword}
-                onChange={(e) => setDeletePassword(e.target.value)}
+                onChange={(e) => {
+                  setDeletePassword(e.target.value)
+                  setDeleteError("")
+                }}
               />
             </div>
+
+            {deleteError && <p className="text-sm text-red-600 mb-3">{deleteError}</p>}
 
             <div className="flex justify-end gap-3">
               <button
                 className="px-4 py-2 bg-gray-200 rounded-lg text-gray-700"
-                onClick={() => setShowDeleteModal(false)}
+                onClick={closeDeleteModal}
               >
                 Cancel
               </button>
 
               <button
                 onClick={handleDeleteAccount}
-                className="px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700"
+                className={`px-4 py-2 rounded-lg text-white ${isDeletingAccount ? "bg-red-400 cursor-not-allowed" : "bg-red-600 hover:bg-red-700"}`}
+                disabled={isDeletingAccount}
               >
-                Delete Account
+                {isDeletingAccount ? "Deleting..." : "Delete Account"}
               </button>
             </div>
           </div>
