@@ -94,38 +94,17 @@ const SignupStep1Page: React.FC<{ navigation: Navigation }> = ({ navigation }) =
       return;
     }
 
-    setIsLoading(true);
     try {
-      const response = await authApi.signup({
+      localStorage.setItem('signupData', JSON.stringify({
         firstName: formData.firstName,
         lastName: formData.lastName,
         dob: formData.dob,
         email: formData.email,
         password: formData.password,
-      });
-
-      if (response.success && response.data) {
-        const data = response.data as { userId: string; email?: string; name?: string };
-        if (data.userId) {
-          // Store userId for step 2
-          localStorage.setItem('signupUserId', data.userId);
-          localStorage.setItem('signupEmail', formData.email);
-          localStorage.setItem('signupData', JSON.stringify({
-            firstName: formData.firstName,
-            lastName: formData.lastName,
-            dob: formData.dob,
-          }));
-          navigation.navigateTo(Page.Signup2);
-        } else {
-          setGeneralError('User ID not received. Please try again.');
-        }
-      } else {
-        setGeneralError(response.message || 'Signup failed. Please try again.');
-      }
+      }));
+      navigation.navigateTo(Page.Signup2);
     } catch (error) {
-      setGeneralError('An error occurred. Please try again.');
-    } finally {
-      setIsLoading(false);
+      setGeneralError('Failed to save data. Please try again.');
     }
   };
 

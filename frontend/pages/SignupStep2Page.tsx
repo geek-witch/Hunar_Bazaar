@@ -295,8 +295,8 @@ const SignupStep2Page: React.FC<{ navigation: Navigation }> = ({ navigation }) =
   });
 
   useEffect(() => {
-    const userId = localStorage.getItem('signupUserId');
-    if (!userId) {
+    const signupDataStr = localStorage.getItem('signupData');
+    if (!signupDataStr) {
       navigation.navigateTo(Page.Signup1);
     }
   }, [navigation]);
@@ -323,13 +323,10 @@ const SignupStep2Page: React.FC<{ navigation: Navigation }> = ({ navigation }) =
             .filter(skill => skill != null && typeof skill === 'string')
             .map(skill => skill.trim())
             .filter(skill => skill !== '');
-          console.log('Cleaned skills:', cleanedSkills);
-          console.log('Cleaned skills count:', cleanedSkills.length);
           setSkillsList(cleanedSkills);
         } else {
           console.error('Failed to fetch skills - Response:', response);
           console.error('Success:', response.success, 'Data type:', typeof response.data, 'Is array:', Array.isArray(response.data));
-          console.error('No skills found in response');
           setSkillsList([]);
         }
       } catch (error) {
@@ -442,16 +439,31 @@ const SignupStep2Page: React.FC<{ navigation: Navigation }> = ({ navigation }) =
       return;
     }
 
-    const userId = localStorage.getItem('signupUserId');
     const signupDataStr = localStorage.getItem('signupData');
     
-    if (!userId || !signupDataStr) {
+    if (!signupDataStr) {
       setGeneralError('Session expired. Please start over.');
       navigation.navigateTo(Page.Signup1);
       return;
     }
 
-    const signupData = JSON.parse(signupDataStr);
+    type StoredSignupData = {
+      firstName?: string;
+      lastName?: string;
+      dob?: string;
+      email?: string;
+      password?: string;
+      [key: string]: any;
+    };
+
+    const signupData = JSON.parse(signupDataStr) as StoredSignupData;
+    
+    // Validate that all required signup data is present
+    if (!signupData.firstName || !signupData.lastName || !signupData.dob || !signupData.email || !signupData.password) {
+      setGeneralError('Session expired. Please start over.');
+      navigation.navigateTo(Page.Signup1);
+      return;
+    }
     
     setIsLoading(true);
     setIsSubmitting(true);
@@ -466,20 +478,14 @@ const SignupStep2Page: React.FC<{ navigation: Navigation }> = ({ navigation }) =
         });
       }
 
-      // Filter out empty social links
       const validSocialLinks = socialLinks.filter(link => link.trim() !== '');
-      
-       const formattedAvailability = availability
-        .map(slot => 
-          `${slot.startTime}-${slot.endTime} on ${slot.days.join(', ')}`
-        )
-        .join('; ');
 
-      const response = await authApi.completeProfile({
-        userId,
+      const response = await authApi.signupAndCompleteProfile({
         firstName: signupData.firstName,
         lastName: signupData.lastName,
         dob: signupData.dob,
+        email: signupData.email,
+        password: signupData.password,
         bio,
         teachSkills,
         learnSkills,
@@ -489,12 +495,20 @@ const SignupStep2Page: React.FC<{ navigation: Navigation }> = ({ navigation }) =
       });
 
       if (response.success) {
+        localStorage.removeItem('signupData');
+        localStorage.removeItem('signupUserId');
+        localStorage.removeItem('signupEmail');
+        
+        if (response.data && typeof response.data === 'object' && 'email' in response.data) {
+          localStorage.setItem('signupEmail', response.data.email as string);
+        }
+        
         navigation.navigateTo(Page.Verify);
       } else {
-        setGeneralError(response.message || 'Failed to complete profile. Please try again.');
+        setGeneralError(response.message || 'Failed to create account. Please try again.');
       }
     } catch (error: any) {
-      console.error('Profile completion error:', error);
+      console.error('Account creation error:', error);
       setGeneralError('An error occurred. Please try again.');
     } finally {
       setIsLoading(false);

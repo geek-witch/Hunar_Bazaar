@@ -100,6 +100,25 @@ export const authApi = {
     });
   },
 
+  signupAndCompleteProfile: async (data: {
+    firstName: string;
+    lastName: string;
+    dob: string;
+    email: string;
+    password: string;
+    bio: string;
+    teachSkills: string[];
+    learnSkills: string[];
+    availability: Array<{ startTime: string; endTime: string; days: string[] }>;
+    socialLinks?: string[];
+    profilePic?: string | null;
+  }) => {
+    return apiRequest<{ userId: string; email: string; profile: any }>('/signup-complete', {
+      method: 'POST',
+      body: JSON.stringify(data),
+    });
+  },
+
   completeProfile: async (data: {
     userId: string;
     firstName: string;

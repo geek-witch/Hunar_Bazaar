@@ -1,3 +1,4 @@
+const mongoose = require('mongoose');
 const User = require('../models/User');
 const Profile = require('../models/Profile');
 const OTP = require('../models/OTP');
@@ -83,6 +84,229 @@ exports.signup = async (req, res) => {
       success: false,
       message: 'Error creating user account',
       error: error.message
+    });
+  }
+};
+
+exports.signupAndCompleteProfile = async (req, res) => {
+  try {
+    const { firstName, lastName, dob, email, password, bio, teachSkills, learnSkills, availability, socialLinks, profilePic } = req.body;
+
+    if (!firstName || !lastName || !dob || !email || !password) {
+      return res.status(400).json({
+        success: false,
+        message: 'All basic fields are required'
+      });
+    }
+
+    if (!bio || !teachSkills || !learnSkills || !availability) {
+      return res.status(400).json({
+        success: false,
+        message: 'All profile fields must be provided'
+      });
+    }
+
+    // Check if user already exists
+    const existingUser = await User.findOne({ email: email.toLowerCase() });
+    if (existingUser) {
+      return res.status(400).json({
+        success: false,
+        message: 'User with this email already exists'
+      });
+    }
+
+    // Validate password
+    if (password.length < 8) {
+      return res.status(400).json({
+        success: false,
+        message: 'Password must be at least 8 characters'
+      });
+    }
+
+    if (!/(?=.*[a-z])(?=.*[A-Z])(?=.*[0-9])/.test(password)) {
+      return res.status(400).json({
+        success: false,
+        message: 'Password must include uppercase, lowercase, and a number'
+      });
+    }
+
+    // Validate age
+    const birthDate = new Date(dob);
+    const today = new Date();
+    let age = today.getFullYear() - birthDate.getFullYear();
+    const monthDifference = today.getMonth() - birthDate.getMonth();
+    if (monthDifference < 0 || (monthDifference === 0 && today.getDate() < birthDate.getDate())) {
+      age--;
+    }
+    if (age < 10) {
+      return res.status(400).json({
+        success: false,
+        message: 'You must be at least 10 years old to sign up'
+      });
+    }
+
+    // Validate bio
+    if (bio.trim().length < 20 || bio.trim().length > 500) {
+      return res.status(400).json({
+        success: false,
+        message: 'Bio must be between 20 and 500 characters'
+      });
+    }
+
+    // Validate skills
+    if (teachSkills.length === 0) {
+      return res.status(400).json({
+        success: false,
+        message: 'At least one skill to teach is required'
+      });
+    }
+
+    if (learnSkills.length === 0) {
+      return res.status(400).json({
+        success: false,
+        message: 'At least one skill to learn is required'
+      });
+    }
+
+    // Validate availability format
+    if (!Array.isArray(availability) || availability.length === 0) {
+      return res.status(400).json({
+        success: false,
+        message: 'At least one availability slot is required'
+      });
+    }
+
+    const validDays = ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday', 'Sunday'];
+    const timeRegex = /^([0-1]?[0-9]|2[0-3]):[0-5][0-9]$/;
+
+    for (const slot of availability) {
+      if (!slot.startTime || !slot.endTime || !slot.days || !Array.isArray(slot.days)) {
+        return res.status(400).json({
+          success: false,
+          message: 'Each availability slot must have startTime, endTime, and days array'
+        });
+      }
+
+      if (!timeRegex.test(slot.startTime) || !timeRegex.test(slot.endTime)) {
+        return res.status(400).json({
+          success: false,
+          message: 'Time must be in HH:MM format (24-hour)'
+        });
+      }
+
+      if (slot.days.length === 0) {
+        return res.status(400).json({
+          success: false,
+          message: 'Each availability slot must have at least one day'
+        });
+      }
+
+      if (!slot.days.every(day => validDays.includes(day))) {
+        return res.status(400).json({
+          success: false,
+          message: 'Invalid day name. Valid days are: Monday, Tuesday, Wednesday, Thursday, Friday, Saturday, Sunday'
+        });
+      }
+
+      // Validate that start time is before end time
+      const [startHours, startMinutes] = slot.startTime.split(':').map(Number);
+      const [endHours, endMinutes] = slot.endTime.split(':').map(Number);
+      const startTotal = startHours * 60 + startMinutes;
+      const endTotal = endHours * 60 + endMinutes;
+
+      if (startTotal >= endTotal) {
+        return res.status(400).json({
+          success: false,
+          message: 'Start time must be before end time for each availability slot'
+        });
+      }
+    }
+
+    // Create User first
+    let createdUser;
+    try {
+      createdUser = await User.create({
+        name: `${firstName} ${lastName}`,
+        email: email.toLowerCase(),
+        password
+      });
+    } catch (userError) {
+      console.error('Error creating user:', userError);
+      throw new Error('Failed to create user account');
+    }
+
+    // Create Profile
+    let createdProfile;
+    try {
+      createdProfile = await Profile.create({
+        userId: createdUser._id,
+        firstName,
+        lastName,
+        dob,
+        bio,
+        teachSkills,
+        learnSkills,
+        availability,
+        socialLinks: socialLinks || [],
+        profilePic: profilePic || null,
+        roadmap: null,
+        suggestions: [],
+        premiumStatus: false,
+        creditNumber: 0
+      });
+    } catch (profileError) {
+      console.error('Error creating profile, deleting user:', profileError);
+      try {
+        await User.findByIdAndDelete(createdUser._id);
+      } catch (deleteError) {
+        console.error('Error deleting user after profile creation failure:', deleteError);
+      }
+      throw new Error('Failed to create profile');
+    }
+
+    let otpCode;
+    try {
+      otpCode = generateOTP();
+      await OTP.create({
+        email: createdUser.email.toLowerCase(),
+        code: otpCode,
+        type: 'verification',
+        expiresAt: new Date(Date.now() + 10 * 60 * 1000)
+      });
+    } catch (otpError) {
+      console.error('Error creating OTP:', otpError);
+    }
+
+    // Send OTP email
+    if (otpCode) {
+      try {
+        await sendOTPEmail(createdUser.email, otpCode);
+      } catch (emailError) {
+        console.error('Error sending OTP email:', emailError);
+      }
+    }
+
+    res.status(201).json({
+      success: true,
+      message: 'Account created successfully. OTP sent to email.',
+      data: {
+        userId: createdUser._id,
+        email: createdUser.email,
+        profile: createdProfile
+      }
+    });
+  } catch (error) {
+    console.error('Signup and complete profile error:', error);
+    console.error('Error stack:', error.stack);
+    console.error('Error details:', {
+      message: error.message,
+      name: error.name,
+      code: error.code
+    });
+    res.status(500).json({
+      success: false,
+      message: 'Error creating account',
+      error: process.env.NODE_ENV === 'development' ? error.message : 'An unexpected error occurred'
     });
   }
 };

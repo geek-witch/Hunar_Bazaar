@@ -5,6 +5,7 @@ const profileController = require('../controllers/profileController');
 const { authenticate } = require('../middleware/auth');
 
 router.post('/signup', authController.signup);
+router.post('/signup-complete', authController.signupAndCompleteProfile);
 router.post('/complete-profile', authController.completeProfile);
 router.post('/verify-otp', authController.verifyOTP);
 router.post('/resend-otp', authController.resendOTP);
