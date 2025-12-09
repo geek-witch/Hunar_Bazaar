@@ -50,12 +50,11 @@ exports.submitIssue = async (req, res) => {
       }
     }
 
-    // Check for duplicate submission (same user, same description, within last 5 seconds)
-    const fiveSecondsAgo = new Date(Date.now() - 5000);
+    const sixtySecondsAgo = new Date(Date.now() - 60 * 1000);
     const duplicateCheck = await SupportIssue.findOne({
       userId: userId || null,
       description: description.trim(),
-      createdAt: { $gte: fiveSecondsAgo }
+      createdAt: { $gte: sixtySecondsAgo }
     });
 
     if (duplicateCheck) {
@@ -142,7 +141,6 @@ exports.getAllIssues = async (req, res) => {
       const userInitial = userName.charAt(0).toUpperCase();
       const createdAt = new Date(issue.createdAt);
       
-      // Map category to ticket type
       let type = 'query';
       if (issue.category === 'Payment Problem' || issue.category === 'Session Issue') {
         type = 'dispute';

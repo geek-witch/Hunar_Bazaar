@@ -72,9 +72,11 @@ const SearchSkillsModal: React.FC<SearchSkillsModalProps> = ({ isOpen, onClose, 
     }
   }, [searchQuery, isOpen])
 
-  const handleUserSelect = (userId: string) => {
-    // Store selected user ID in sessionStorage to pass to ViewProfilePage
-    sessionStorage.setItem("selectedUserId", userId)
+  const handleUserSelect = (profileId: string, userId?: string) => {
+    sessionStorage.setItem("selectedProfileId", profileId)
+    if (userId) {
+      sessionStorage.setItem("selectedUserId", userId)
+    }
     navigation.navigateTo(Page.ViewProfile)
     onClose()
   }
@@ -135,7 +137,7 @@ const SearchSkillsModal: React.FC<SearchSkillsModalProps> = ({ isOpen, onClose, 
                 {searchResults.map((result) => (
                   <div
                     key={result.id}
-                    onClick={() => handleUserSelect(result.id)}
+                    onClick={() => handleUserSelect(result.profileId || result.id, result.id)}
                     className="p-4 hover:bg-gray-50 cursor-pointer transition-colors flex items-center gap-4"
                   >
                     <img

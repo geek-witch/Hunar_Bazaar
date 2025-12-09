@@ -274,6 +274,41 @@ export const authApi = {
       };
     }
   },
+
+  getPublicProfile: async (profileId: string) => {
+    try {
+      const token = localStorage.getItem('token');
+      const headers: HeadersInit = {
+        'Content-Type': 'application/json',
+      };
+      if (token) {
+        headers.Authorization = `Bearer ${token}`;
+      }
+
+      const response = await fetch(`${API_ROOT_URL}/skills/${profileId}`, {
+        method: 'GET',
+        headers,
+      });
+      const data = await response.json();
+      if (!response.ok) {
+        return {
+          success: false,
+          message: data.message || 'Failed to fetch profile',
+          error: data.error,
+        };
+      }
+      return {
+        success: true,
+        ...data,
+      };
+    } catch (error: any) {
+      return {
+        success: false,
+        message: error.message || 'Network error occurred',
+        error: error.toString(),
+      };
+    }
+  },
 };
 
 export const supportApi = {

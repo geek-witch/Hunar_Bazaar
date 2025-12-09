@@ -79,3 +79,53 @@ exports.browseSkills = async (req, res) => {
     });
   }
 };
+
+exports.getProfileById = async (req, res) => {
+  try {
+    const { profileId } = req.params;
+
+    if (!profileId) {
+      return res.status(400).json({
+        success: false,
+        message: 'Profile id is required'
+      });
+    }
+
+    const profile = await Profile.findById(profileId)
+      .populate('userId', 'name email isVerified')
+      .lean();
+
+    if (!profile) {
+      return res.status(404).json({
+        success: false,
+        message: 'Profile not found'
+      });
+    }
+
+    const fallbackName = [profile.firstName, profile.lastName].filter(Boolean).join(' ') || 'Hunar Bazaar Member';
+
+    res.status(200).json({
+      success: true,
+      data: {
+        id: profile.userId?._id?.toString() || profile._id.toString(),
+        profileId: profile._id.toString(),
+        name: profile.userId?.name || fallbackName,
+        email: profile.userId?.email || '',
+        bio: profile.bio || '',
+        teachSkills: profile.teachSkills || [],
+        learnSkills: profile.learnSkills || [],
+        availability: profile.availability || [],
+        profilePic: profile.profilePic || null,
+        socialLinks: profile.socialLinks || [],
+        isVerified: profile.userId?.isVerified || false,
+      }
+    });
+  } catch (error) {
+    console.error('Get profile by id error:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Error fetching profile',
+      error: error.message
+    });
+  }
+};
