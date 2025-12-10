@@ -185,7 +185,7 @@ exports.getIssueComments = async (req, res) => {
     const { id } = req.params;
 
     const issue = await SupportIssue.findById(id)
-      .populate('userId', 'name email profilePic')
+      .populate('userId', 'name email')
       .lean();
 
     if (!issue) {
@@ -196,21 +196,6 @@ exports.getIssueComments = async (req, res) => {
     }
 
     const comments = [];
-    
-    const userName = issue.userId?.name || 'Anonymous';
-    const userInitial = userName.charAt(0).toUpperCase();
-    const createdAt = new Date(issue.createdAt);
-    
-    comments.push({
-      id: 'initial',
-      author: userName,
-      role: 'user',
-      message: issue.description,
-      date: createdAt.toISOString().split('T')[0],
-      time: createdAt.toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit', hour12: true }),
-      avatar: userInitial,
-      image: issue.userId?.profilePic || undefined
-    });
 
     if (issue.adminComments && issue.adminComments.length > 0) {
       issue.adminComments.forEach((comment, index) => {

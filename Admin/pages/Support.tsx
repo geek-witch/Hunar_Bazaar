@@ -151,7 +151,6 @@ export default function Support() {
   })
   const [ticketStatuses, setTicketStatuses] = useState<Record<string, "pending" | "resolved">>({})
 
-  // Fetch issues from backend
   useEffect(() => {
     const fetchIssues = async () => {
       try {
@@ -172,8 +171,6 @@ export default function Support() {
         })
 
         const data = await response.json()
-        console.log('Admin Support - API Response:', data)
-        console.log('Admin Support - Response status:', response.status)
         
         if (!response.ok) {
           setError(data.message || `Failed to fetch issues (${response.status})`)
@@ -273,7 +270,6 @@ export default function Support() {
     }
   }
 
-  // Filtering is now done on the backend, but we can add client-side filtering for search
   const filteredTickets = tickets
 
   const currentTicket = tickets.find((t) => t.id === selectedTicket)
@@ -528,7 +524,8 @@ export default function Support() {
                       className={`flex gap-3 ${comment.role === "admin" ? "flex-row-reverse" : ""}`}
                     >
                       <div className="w-8 h-8 md:w-10 md:h-10 flex-shrink-0 rounded-full overflow-hidden">
-                        <Avatar image={comment.image} initial={comment.avatar} name={comment.author} />
+                        {<Avatar image={comment.image} initial={comment.avatar} name={comment.author} />}
+                        
                       </div>
                       <div className={`flex-1 ${comment.role === "admin" ? "text-right" : ""}`}>
                         <div
