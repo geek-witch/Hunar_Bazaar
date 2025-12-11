@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { Input } from '../components/Input';
+import { Eye, EyeOff } from 'lucide-react';
 
 interface LoginProps {
   onLogin: () => void;
@@ -8,62 +8,100 @@ interface LoginProps {
 export const Login: React.FC<LoginProps> = ({ onLogin }) => {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
+  const [showPassword, setShowPassword] = useState(false);
   const [error, setError] = useState('');
+  const [isLoading, setIsLoading] = useState(false);
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-    // Mock validation
-    if (email === 'admin@hunarbazaar.com' && password === 'Admin123') {
-      onLogin();
-    } else if (!email || !password) {
-      setError('Please fill in all fields.');
-    } else {
-      // Allow any login for demo purposes
-      onLogin();
-    }
+    setError('');
+    setIsLoading(true);
+
+    setTimeout(() => {
+      if (!email || !password) {
+        setError('Please fill in all fields.');
+      } else if (email === 'admin@hunarbazaar.com' && password === 'Admin123') {
+        onLogin();
+      } else {
+        onLogin();
+      }
+      setIsLoading(false);
+    }, 800);
   };
 
   return (
-    <div className="min-h-screen flex items-center justify-center bg-[#f0f6fa] p-4 relative overflow-hidden">
-      {/* Decorative Background Animations */}
-      <div className="absolute top-0 left-0 w-full h-full overflow-hidden pointer-events-none">
-        <div className="absolute -top-20 -left-20 w-96 h-96 bg-[#0E4B5B] rounded-full mix-blend-multiply filter blur-3xl opacity-5 animate-pulse"></div>
-        <div className="absolute -bottom-20 -right-20 w-96 h-96 bg-blue-300 rounded-full mix-blend-multiply filter blur-3xl opacity-10 animate-pulse" style={{ animationDelay: '1s' }}></div>
+    <div
+      className="relative min-h-screen flex items-center justify-center py-12 px-4 sm:px-6 lg:px-8 overflow-hidden"
+      style={{ backgroundColor: '#E6F0FF' }}
+    >
+      {/* Floating shapes */}
+      <div className="absolute inset-0 pointer-events-none">
+        {/* Yellow CIRCLE */}
+        <div className="absolute top-10 left-5 w-8 h-8 bg-yellow-300 rounded-full opacity-50 animate-pulse"></div>
+        {/* Red circle */}
+        <div className="absolute bottom-10 right-5 w-12 h-12 bg-red-300 rounded-full opacity-50 animate-pulse delay-500"></div>
 
-        {/* Stars and Circles */}
-        <div className="absolute top-20 right-20 text-yellow-400 text-xl animate-bounce" style={{ animationDuration: '3s' }}>★</div>
-        <div className="absolute bottom-1/4 left-10 w-4 h-4 bg-[#0E4B5B] rounded-full opacity-20 animate-ping"></div>
-        <div className="absolute top-1/2 left-20 w-2 h-2 bg-blue-500 rounded-full opacity-40 animate-pulse"></div>
-        <div className="absolute bottom-20 right-1/3 text-[#0E4B5B]/10 text-4xl animate-spin" style={{ animationDuration: '10s' }}>●</div>
       </div>
 
-      <div className="bg-white p-8 rounded-2xl shadow-xl w-full max-w-md border-t-4 border-[#0E4B5B] relative z-10">
-        <h2 className="text-2xl font-bold text-center text-[#0E4B5B] mb-2 mt-4">Admin Login</h2>
-        <p className="text-center text-gray-500 mb-8">Enter your credentials to access the panel</p>
+      {/* Login card */}
+      <div className="max-w-md w-full space-y-8 bg-white p-8 sm:p-10 rounded-2xl shadow-xl relative z-10 border-t-4 border-[#0E4B5B]">
+        <div>
+          <h2 className="mt-6 text-center text-3xl font-bold text-[#0E4B5B]">
+            Welcome Back!
+          </h2>
+          <p className="mt-2 text-center text-sm text-gray-600">
+            Enter your credentials to access the panel
+          </p>
+        </div>
 
-        <form onSubmit={handleSubmit}>
-          <Input 
-            label="Email Address" 
-            type="email" 
-            placeholder="admin@hunarbazaar.com"
-            value={email}
-            onChange={(e) => setEmail(e.target.value)}
-          />
-          <Input 
-            label="Password" 
-            type="password" 
-            placeholder="••••••••"
-            value={password}
-            onChange={(e) => setPassword(e.target.value)}
-          />
+        {error && (
+          <div className="mt-4 p-3 bg-red-50 border border-red-200 rounded-md">
+            <p className="text-red-600 text-sm text-center">{error}</p>
+          </div>
+        )}
 
-          {error && <div className="text-red-500 text-sm mb-4 text-center">{error}</div>}
+        <form className="mt-8 space-y-6" onSubmit={handleSubmit} noValidate>
+          {/* Email field */}
+          <div>
+            <label htmlFor="email" className="sr-only">Email</label>
+            <input
+              id="email"
+              type="email"
+              placeholder="admin@hunarbazaar.com"
+              value={email}
+              onChange={(e) => setEmail(e.target.value)}
+              className="appearance-none rounded-md block w-full px-3 py-2 border border-gray-300 bg-[#F3F8FF] placeholder-gray-500 text-gray-900 focus:outline-none focus:ring-brand-teal focus:border-brand-teal sm:text-sm"
+            />
+          </div>
 
+          {/* Password field with eye toggle */}
+          <div className="relative">
+            <label htmlFor="password" className="sr-only">Password</label>
+            <input
+              id="password"
+              name="password"
+              type={showPassword ? 'text' : 'password'}
+              placeholder="••••••••"
+              value={password}
+              onChange={(e) => setPassword(e.target.value)}
+              className="appearance-none rounded-md block w-full px-3 py-2 border border-gray-300 bg-[#F3F8FF] placeholder-gray-500 text-gray-900 focus:outline-none focus:ring-brand-teal focus:border-brand-teal sm:text-sm"
+            />
+            <button
+              type="button"
+              onClick={() => setShowPassword(!showPassword)}
+              className="absolute inset-y-0 right-0 pr-3 flex items-center text-gray-500"
+            >
+              {showPassword ? <EyeOff size={20} /> : <Eye size={20} />}
+            </button>
+          </div>
+
+          {/* Submit button */}
           <button
             type="submit"
-            className="w-full bg-[#0E4B5B] text-white py-3 rounded-lg font-semibold hover:bg-[#093540] transition-colors shadow-lg shadow-[#0E4B5B]/20"
+            disabled={isLoading}
+            className="group relative w-full flex justify-center py-2 px-4 border border-transparent text-sm font-medium rounded-md text-white bg-[#0E4B5B] hover:bg-[#093540] focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-[#0E4B5B] disabled:opacity-50 disabled:cursor-not-allowed"
           >
-            Sign In
+            {isLoading ? 'Signing in...' : 'Sign In'}
           </button>
         </form>
       </div>

@@ -224,7 +224,7 @@ export const UsersPage: React.FC<UsersPageProps> = ({ plans }) => {
       {type}
     </span>
   );
- 
+ {/* Status */}
   const StatusBadge = ({ status }: { status: string }) => {
     let styles = '';
     switch (status) {

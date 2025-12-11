@@ -40,14 +40,38 @@ const Footer: React.FC<FooterProps> = ({ navigation }) => {
             </ul>
           </div>
 
-          <div className="md:col-span-2">
-            <h3 className="font-semibold mb-4 uppercase">Follow Us</h3>
-            <div className="flex space-x-4 justify-center md:justify-start">
-              <a href="#" className="text-gray-300 hover:text-white transition-colors"><FacebookIcon className="w-6 h-6" /></a>
-              <a href="#" className="text-gray-300 hover:text-white transition-colors"><InstagramIcon className="w-6 h-6" /></a>
-              <a href="#" className="text-gray-300 hover:text-white transition-colors"><TwitterIcon className="w-6 h-6" /></a>
-            </div>
-          </div>
+<div className="md:col-span-2">
+  <h3 className="font-semibold mb-4 uppercase">Follow Us</h3>
+  <div className="flex space-x-4 justify-center md:justify-start">
+    <a 
+      href="https://www.facebook.com/r.php" 
+      target="_blank" 
+      rel="noopener noreferrer"
+      className="text-gray-300 hover:text-white transition-colors"
+    >
+      <FacebookIcon className="w-6 h-6" />
+    </a>
+
+    <a 
+      href="https://www.instagram.com/accounts/emailsignup/" 
+      target="_blank" 
+      rel="noopener noreferrer"
+      className="text-gray-300 hover:text-white transition-colors"
+    >
+      <InstagramIcon className="w-6 h-6" />
+    </a>
+
+    <a 
+      href="https://twitter.com/i/flow/signup" 
+      target="_blank" 
+      rel="noopener noreferrer"
+      className="text-gray-300 hover:text-white transition-colors"
+    >
+      <TwitterIcon className="w-6 h-6" />
+    </a>
+  </div>
+</div>
+
 
           <div className="md:col-span-4">
             <h3 className="font-semibold mb-4 uppercase">Subscribe</h3>

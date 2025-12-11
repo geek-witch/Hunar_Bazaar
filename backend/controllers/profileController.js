@@ -2,6 +2,7 @@ const User = require('../models/User');
 const Profile = require('../models/Profile');
 const OTP = require('../models/OTP');
 const PasswordReset = require('../models/PasswordReset');
+const SupportIssue = require('../models/SupportIssue');
 
 exports.getProfile = async (req, res) => {
   try {
@@ -179,6 +180,80 @@ exports.updateProfile = async (req, res) => {
   }
 };
 
+exports.changePassword = async (req, res) => {
+  try {
+    const userId = req.user?._id;
+    const { currentPassword, newPassword } = req.body;
+
+    if (!userId) {
+      return res.status(401).json({
+        success: false,
+        message: 'Unauthorized request'
+      });
+    }
+
+    if (!currentPassword || !newPassword) {
+      return res.status(400).json({
+        success: false,
+        message: 'Current password and new password are required'
+      });
+    }
+
+    const user = await User.findById(userId);
+    if (!user) {
+      return res.status(404).json({
+        success: false,
+        message: 'User not found'
+      });
+    }
+
+    const isPasswordValid = await user.comparePassword(currentPassword);
+    if (!isPasswordValid) {
+      return res.status(401).json({
+        success: false,
+        message: 'Current password is incorrect'
+      });
+    }
+
+    if (newPassword.length < 8) {
+      return res.status(400).json({
+        success: false,
+        message: 'Password must be at least 8 characters'
+      });
+    }
+
+    if (!/(?=.*[a-z])(?=.*[A-Z])(?=.*[0-9])/.test(newPassword)) {
+      return res.status(400).json({
+        success: false,
+        message: 'Password must include uppercase, lowercase, and a number'
+      });
+    }
+
+    const isSamePassword = await user.comparePassword(newPassword);
+    if (isSamePassword) {
+      return res.status(400).json({
+        success: false,
+        message: 'New password must be different from current password'
+      });
+    }
+
+    user.password = newPassword;
+    await user.save();
+
+    res.status(200).json({
+      success: true,
+      message: 'Password changed successfully'
+    });
+  } catch (error) {
+    console.error('Change password error:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Error changing password',
+      error: error.message
+    });
+  }
+};
+
 exports.deleteAccount = async (req, res) => {
   try {
     const userId = req.user?._id;
@@ -221,12 +296,8 @@ exports.deleteAccount = async (req, res) => {
     ]);
 
     await User.deleteOne({ _id: userId });
-    await Profile.deleteOne({ userId: userId })
-
-    console.info('Account deleted via profile controller', {
-      userId: userId.toString(),
-      reason: reason || 'Not provided'
-    });
+    await Profile.deleteOne({ userId: userId });
+    await SupportIssue.deleteMany({ userId: userId });
 
     res.status(200).json({
       success: true,

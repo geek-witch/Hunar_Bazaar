@@ -1,7 +1,6 @@
 import React, { useState, useEffect } from 'react';
-import { Logo } from './Logo';
 import { 
-  LayoutDashboard, Users, CreditCard, MessageCircle, FileText, LogOut, Settings, Menu, X, Bell
+  LayoutDashboard, Users, CreditCard, MessageCircle, FileText, Menu, Bell
 } from 'lucide-react';
 import { AppNotification } from '../types';
 import { NotificationsPanel } from './NotificationsPanel';
@@ -36,7 +35,7 @@ export const Layout: React.FC<LayoutProps> = ({
     setIsSidebarOpen(false);
   };
 
-  // Lock body scroll
+  // Lock body scroll when sidebar or notification panel is open
   useEffect(() => {
     if (isSidebarOpen || isNotifPanelOpen) {
       document.body.style.overflow = 'hidden';
@@ -61,34 +60,28 @@ export const Layout: React.FC<LayoutProps> = ({
             <Menu size={28} />
           </button>
           
-          <Logo light={false} />
+          {/* Logo Image */}
+          <img 
+            src="/assets/logo.png" 
+            alt="Hunar Bazaar Logo" 
+            className="h-10 w-auto object-contain"
+          />
+          <span className="text-2xl font-bold text-[#0E4B5B]">Hunar Bazaar</span>
         </div>
 
         <div className="flex items-center gap-4 sm:gap-6">
-           {/* Notification Bell */}
-           <button 
-             onClick={() => setIsNotifPanelOpen(true)}
-             className="relative p-2 text-[#0E4B5B] hover:bg-blue-200 rounded-full transition-colors"
-           >
-             <Bell size={24} />
-             {unreadCount > 0 && (
-               <span className="absolute top-1 right-1 w-5 h-5 bg-red-500 text-white text-[10px] font-bold flex items-center justify-center rounded-full border-2 border-[#E6EEF9]">
-                 {unreadCount}
-               </span>
-             )}
-           </button>
-
-           <div className="flex items-center gap-3 pl-0 sm:pl-6 sm:border-l border-blue-200">
-             <div className="text-right hidden sm:block">
-               <p className="font-bold text-[#0E4B5B] text-sm">Admin User</p>
-               <p className="text-xs text-gray-500 font-medium">Muhammad Ali</p>
-             </div>
-             <img 
-               src="https://media.istockphoto.com/id/174766396/photo/young-asian-indian-businessman-working-on-laptop-in-cafeteria.jpg?s=2048x2048&w=is&k=20&c=3UDLvCQLVtrs5v5yDJt6PrIMpj5XI_anJwIK-ODSG7E="
-               alt="Admin Profile"
-               className="h-10 w-10 rounded-full object-cover border-2 border-[#0E4B5B] shadow-sm"
-             />
-           </div>
+          {/* Notification Bell */}
+          <button 
+            onClick={() => setIsNotifPanelOpen(true)}
+            className="relative p-2 text-[#0E4B5B] hover:bg-blue-200 rounded-full transition-colors"
+          >
+            <Bell size={24} />
+            {unreadCount > 0 && (
+              <span className="absolute top-1 right-1 w-5 h-5 bg-red-500 text-white text-[10px] font-bold flex items-center justify-center rounded-full border-2 border-[#E6EEF9]">
+                {unreadCount}
+              </span>
+            )}
+          </button>
         </div>
       </header>
 
@@ -109,16 +102,6 @@ export const Layout: React.FC<LayoutProps> = ({
           transition-transform duration-300 ease-in-out border-r border-blue-200
           ${isSidebarOpen ? 'translate-x-0' : '-translate-x-full'}
         `}>
-          <div className="h-20 flex-shrink-0 flex items-center justify-between px-6 border-b border-blue-200 bg-[#E6EEF9]">
-            <span className="font-bold text-lg text-[#0E4B5B] uppercase tracking-wider">Menu</span>
-            <button 
-              onClick={() => setIsSidebarOpen(false)} 
-              className="text-[#0E4B5B] hover:text-teal-700 transition-colors p-1 hover:bg-blue-200 rounded-md"
-            >
-              <X size={24} />
-            </button>
-          </div>
-
           <nav className="flex-1 p-4 space-y-2 overflow-y-auto custom-scrollbar">
             {menuItems.map((item) => {
               const Icon = item.icon;
@@ -140,13 +123,12 @@ export const Layout: React.FC<LayoutProps> = ({
             })}
           </nav>
 
-          <div className="p-4 border-t border-blue-200 space-y-2 bg-[#E6EEF9]">
-            
-            <button 
+          {/* Logout Button */}
+          <div className="h-20 flex-shrink-0 flex items-center justify-center px-6 border-t border-blue-200 bg-[#E6EEF9]">
+            <button
               onClick={onLogout}
-              className="w-full flex items-center gap-3 px-4 py-3 text-sm font-medium text-red-600 hover:bg-red-50 rounded-lg transition-colors"
+              className="w-full py-3 bg-[#0E4B5B] hover:bg-[#093540] text-white rounded-lg text-sm font-bold flex items-center justify-center gap-2 transition-colors"
             >
-              <LogOut size={20} />
               Logout
             </button>
           </div>
@@ -162,7 +144,7 @@ export const Layout: React.FC<LayoutProps> = ({
 
       {/* 3. Footer */}
       <footer className="flex-none h-12 bg-[#E6EEF9] border-t border-blue-200 z-30 flex items-center justify-center text-xs font-medium text-[#0E4B5B] shadow-[0_-4px_6px_-1px_rgba(0,0,0,0.1)]">
-        <p>© 2024 Hunar Bazaar. All rights reserved.</p>
+        <p>© 2025 Hunar Bazaar. All rights reserved.</p>
       </footer>
 
       {/* Notification Panel */}
@@ -173,7 +155,6 @@ export const Layout: React.FC<LayoutProps> = ({
           onMarkAllRead={onMarkAllRead}
         />
       )}
-
     </div>
   );
 };

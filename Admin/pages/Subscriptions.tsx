@@ -53,7 +53,7 @@ export const SubscriptionsPage: React.FC<SubscriptionsPageProps> = ({ plans, onU
       setEditPrice(val);
     }
   };
-
+  {/*Subscription cards*/ } 
   return (
     <div className="space-y-6">
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8 mt-8">
@@ -80,7 +80,7 @@ export const SubscriptionsPage: React.FC<SubscriptionsPageProps> = ({ plans, onU
                 {plan.type === 'Free' ? 'For casual learners' : plan.type === 'Premium' ? 'For dedicated learners & teachers' : 'For power users & companies'}
               </p>
             </div>
-
+             {/*[appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none*/}
             <div className="mb-6 flex items-end gap-1 min-h-[4rem]">
               {editingId === plan.id ? (
                 <div className="flex flex-col w-full gap-2">
@@ -93,7 +93,7 @@ export const SubscriptionsPage: React.FC<SubscriptionsPageProps> = ({ plans, onU
                     placeholder="Enter monthly price"
                     title="Monthly Price (PKR)"
                     aria-label="Monthly Price in PKR"
-                    className="w-full px-3 py-2 rounded-lg text-gray-800 text-xl font-bold border-2 border-[#0E4B5B] focus:outline-none focus:ring-2 focus:ring-[#0E4B5B] focus:ring-offset-2 bg-white"
+                    className="w-full px-3 py-2 rounded-lg text-gray-800 text-xl font-bold border-2 border-[#0E4B5B] focus:outline-none focus:ring-2 focus:ring-[#0E4B5B] focus:ring-offset-2 bg-white "
                     autoFocus
                   />
                 </div>
@@ -107,7 +107,9 @@ export const SubscriptionsPage: React.FC<SubscriptionsPageProps> = ({ plans, onU
                        {plan.currency}/month
                      </span>
                   )}
+                    
                   <button 
+                  /*Edit button*/
                     onClick={() => startEdit(plan)} 
                     className="ml-auto mb-2 p-2.5 rounded-lg transition-all duration-200 hover:scale-110 text-[#0E4B5B] bg-blue-100 border-2 border-[#0E4B5B] shadow-md hover:shadow-lg hover:bg-[#0E4B5B] hover:text-white"
                     title="Edit Plan"
@@ -117,7 +119,7 @@ export const SubscriptionsPage: React.FC<SubscriptionsPageProps> = ({ plans, onU
                 </>
               )}
             </div>
-
+              {/*Features List*/ } 
             <div className="flex-1">
               <ul className="space-y-4 mb-8">
                 {editingId === plan.id ? (
@@ -163,7 +165,7 @@ export const SubscriptionsPage: React.FC<SubscriptionsPageProps> = ({ plans, onU
                 )}
               </ul>
             </div>
-            
+            {/*save and cancel*/ } 
             {editingId === plan.id ? (
                <div className="flex gap-3">
                   <button 

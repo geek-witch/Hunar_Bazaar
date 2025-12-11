@@ -116,7 +116,7 @@ const ContactUsPage: React.FC<{ navigation: Navigation }> = ({ navigation }) => 
         style={{
             backgroundImage: `url(${contactusGif})`,
             backgroundSize: "cover",
-            backgroundPosition: "center",
+            backgroundPosition: "top",
         }}
     />
 

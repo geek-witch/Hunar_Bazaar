@@ -23,7 +23,7 @@ const HelpCenterPage: React.FC<{ navigation: Navigation }> = ({ navigation }) =>
   const [issueCategory, setIssueCategory] = useState("General Inquiry")
   const [issueAttachment, setIssueAttachment] = useState<File | null>(null)
 
-  const faqs: FAQItem[] = [
+   const faqs: FAQItem[] = [
     {
       id: "1",
       category: "Getting Started",
@@ -50,49 +50,42 @@ const HelpCenterPage: React.FC<{ navigation: Navigation }> = ({ navigation }) =>
       category: "Sessions",
       question: "What should I do if my tutor doesn't show up?",
       answer:
-        "If your tutor is more than 15 minutes late, you can cancel and get a refund.",
+        "If your tutor is more than 15 minutes late, you can cancel.",
     },
     {
       id: "5",
       category: "Payments",
       question: "How do credits work?",
       answer:
-        "Credits are virtual currency used to pay for sessions. 1 credit = 1 USD.",
+        "you get credits by your teaching skills and through them you can get badges of achievement or skill recognition."
     },
     {
       id: "6",
       category: "Payments",
       question: "Is there a refund policy?",
       answer:
-        "Yes, you can request a refund within 7 days of purchasing credits.",
+        "No, For subscription plans , there is no refund policy.",
     },
     {
       id: "7",
       category: "Profile",
-      question: "How do I verify my credentials?",
+      question: "Can I become a teacher on HunarBazaar?",
       answer:
-        "Upload certificates in your profile settings. Our team verifies them in 24–48 hours.",
+        "Yes! on Hunar Bazaar everyone is a teacher.",
     },
     {
       id: "8",
-      category: "Profile",
-      question: "Can I become a tutor on HunarBazaar?",
-      answer:
-        "Yes! Go to 'Become a Tutor' section and apply.",
-    },
-    {
-      id: "9",
       category: "Technical Issues",
       question: "I'm having trouble accessing the video call.",
       answer:
         "Ensure your internet is stable and permissions are allowed.",
     },
     {
-      id: "10",
+      id: "9",
       category: "Technical Issues",
       question: "How do I change my password?",
       answer:
-        "Go to Settings → Security → Change Password.",
+        "Go to Settings → Privacy and Security → Change Password.",
     },
   ]
 

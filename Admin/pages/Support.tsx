@@ -16,7 +16,7 @@ interface Ticket {
   status: "pending" | "resolved"
   date: string
   time: string
-  priority: "high" | "medium" | "low"
+
 }
 
 interface Comment {
@@ -37,7 +37,7 @@ const Avatar = ({ image, initial, name }: { image?: string; initial: string; nam
   if (image && !imageError) {
     return (
       <img
-        src={image || "/placeholder.svg"}
+        src={image}
         alt={name}
         onError={() => setImageError(true)}
         className="w-full h-full rounded-full object-cover"
@@ -64,91 +64,7 @@ export default function Support() {
   const [tickets, setTickets] = useState<Ticket[]>([])
   const [isLoading, setIsLoading] = useState(true)
   const [error, setError] = useState<string>("")
-  const [comments, setComments] = useState<Record<string, Comment[]>>({
-    "1": [
-      {
-        id: "1",
-        author: "Ali Khan",
-        role: "user",
-        message:
-          "I tried to upgrade to Premium yesterday but the amount was deducted and my plan is still Basic. Please help.",
-        date: "2023-10-25",
-        time: "09:30 AM",
-        avatar: "A",
-        image: "https://api.dicebear.com/7.x/avataaars/svg?seed=Ali",
-      },
-    ],
-    "2": [
-      {
-        id: "1",
-        author: "Zainab Ali",
-        role: "user",
-        message:
-          "I booked a plumber (ID #55) for 2 PM. He never showed up and is not picking up calls. I want a refund of my credits.",
-        date: "2023-10-24",
-        time: "02:15 PM",
-        avatar: "Z",
-        image: "https://api.dicebear.com/7.x/avataaars/svg?seed=Zainab",
-      },
-    ],
-    "3": [
-      {
-        id: "1",
-        author: "Hassan Ahmed",
-        role: "user",
-        message: "My account was restricted. I want to appeal this decision and understand the reason.",
-        date: "2023-10-20",
-        time: "11:45 AM",
-        avatar: "H",
-        image: "https://api.dicebear.com/7.x/avataaars/svg?seed=Hassan",
-      },
-    ],
-    "4": [
-      {
-        id: "1",
-        author: "Fatima Khan",
-        role: "user",
-        message: "The service was not up to the standard promised. Looking for compensation.",
-        date: "2023-10-19",
-        time: "03:20 PM",
-        avatar: "F",
-        image: "https://api.dicebear.com/7.x/avataaars/svg?seed=Fatima",
-      },
-    ],
-    "5": [
-      {
-        id: "1",
-        author: "Bilal Ahmed",
-        role: "user",
-        message: "I was charged twice for the same service. Please investigate.",
-        date: "2023-10-18",
-        time: "10:00 AM",
-        avatar: "B",
-        image: "https://api.dicebear.com/7.x/avataaars/svg?seed=Bilal",
-      },
-      {
-        id: "2",
-        author: "Support Team",
-        role: "admin",
-        message:
-          "We have reviewed your account and confirmed the duplicate charge. A refund of 500 PKR has been processed to your original payment method. It will reflect within 3-5 business days.",
-        date: "2023-10-18",
-        time: "02:30 PM",
-        avatar: "ST",
-        image: "https://api.dicebear.com/7.x/avataaars/svg?seed=Support",
-      },
-      {
-        id: "3",
-        author: "Support Team",
-        role: "admin",
-        message: "Your case has been resolved. Please let us know if you need any further assistance.",
-        date: "2023-10-19",
-        time: "09:15 AM",
-        avatar: "ST",
-        image: "https://api.dicebear.com/7.x/avataaars/svg?seed=Support",
-      },
-    ],
-  })
+  const [comments, setComments] = useState<Record<string, Comment[]>>({})
   const [ticketStatuses, setTicketStatuses] = useState<Record<string, "pending" | "resolved">>({})
 
   useEffect(() => {
@@ -182,13 +98,11 @@ export default function Support() {
         } else if (data.success && Array.isArray(data.data)) {
           setError("")
           setTickets(data.data)
-          // Initialize statuses
           const statusMap: Record<string, "pending" | "resolved"> = {}
           data.data.forEach((ticket: Ticket) => {
             statusMap[ticket.id] = ticket.status
           })
           setTicketStatuses(statusMap)
-          // Select first ticket if available and none selected
           if (data.data.length > 0 && (!selectedTicket || !data.data.find((t: Ticket) => t.id === selectedTicket))) {
             setSelectedTicket(data.data[0].id)
           } else if (data.data.length === 0) {
@@ -208,7 +122,6 @@ export default function Support() {
       }
     }
 
-    // Debounce search
     const timeoutId = setTimeout(() => {
       fetchIssues()
     }, searchTerm ? 500 : 0)
@@ -216,7 +129,6 @@ export default function Support() {
     return () => clearTimeout(timeoutId)
   }, [activeTab, searchTerm])
 
-  // Fetch comments when ticket is selected
   useEffect(() => {
     if (!selectedTicket) return
 
@@ -293,7 +205,6 @@ export default function Support() {
 
       const data = await response.json()
       if (data.success) {
-        // Refresh comments
         const commentsResponse = await fetch(`${API_ROOT_URL}/support/issues/${selectedTicket}/comments`, {
           method: 'GET',
           headers: {
@@ -409,11 +320,13 @@ export default function Support() {
                 <p className="text-sm font-medium">No tickets found</p>
                 {!error && <p className="text-xs mt-2">Issues submitted from the Help Center will appear here.</p>}
               </div>
+              
             ) : (
               filteredTickets.map((ticket) => (
                 <button
                   key={ticket.id}
                   onClick={() => handleTicketClick(ticket.id)}
+                /* Highlight selected ticket */
                   className={`w-full p-3 md:p-4 rounded-xl text-left transition-all border-2 ${
                     selectedTicket === ticket.id
                       ? "border-[#0E4B5B] bg-blue-50"
@@ -421,6 +334,7 @@ export default function Support() {
                   }`}
                 >
                   <div className="flex items-start justify-between mb-2">
+                      
                     <span className={`text-xs font-bold px-2.5 py-1 rounded-full border ${getTypeColor(ticket.type)}`}>
                       {ticket.type.toUpperCase()}
                     </span>
@@ -477,7 +391,7 @@ export default function Support() {
 
               {/* Message Area */}
               <div className="flex-1 overflow-y-auto p-3 md:p-6 space-y-4 bg-gray-50">
-                {/* Original Ticket Message */}
+                {/* Original USER Ticket Message */}
                 {currentTicket && (
                   <div className="flex gap-3">
                     <div className="w-8 h-8 md:w-10 md:h-10 flex-shrink-0 rounded-full overflow-hidden">
@@ -524,17 +438,19 @@ export default function Support() {
                       className={`flex gap-3 ${comment.role === "admin" ? "flex-row-reverse" : ""}`}
                     >
                       <div className="w-8 h-8 md:w-10 md:h-10 flex-shrink-0 rounded-full overflow-hidden">
-                        {<Avatar image={comment.image} initial={comment.avatar} name={comment.author} />}
-                        
+                        <Avatar image={comment.image} initial={comment.avatar} name={comment.author} />
                       </div>
                       <div className={`flex-1 ${comment.role === "admin" ? "text-right" : ""}`}>
-                        <div
+                   <div
                           className={`flex items-center gap-2 mb-1 flex-wrap ${comment.role === "admin" ? "justify-end" : ""}`}
                         >
-                          <p className="font-bold text-xs md:text-sm text-gray-900">{comment.author}</p>
+                           {/* Admin role styling - author name removed for admin */}
+                          {comment.role !== "admin" && (
+                            <p className="font-bold text-xs md:text-sm text-gray-900">{comment.author}</p>
+                          )}
                           <span
                             className={`text-xs px-2 py-0.5 rounded-full font-semibold ${
-                              comment.role === "admin" ? "bg-[#0E4B5B] text-white" : "bg-gray-300 text-gray-700"
+                              comment.role === "admin" ?  "bg-[#0E4B5B] text-white" : "bg-gray-300 text-gray-700"
                             }`}
                           >
                             {comment.role === "admin" ? "Admin" : "User"}
@@ -543,6 +459,7 @@ export default function Support() {
                             {comment.date} {comment.time}
                           </p>
                         </div>
+                        {/* Admin text styling */}
                         <div
                           className={`inline-block rounded-lg p-3 ${
                             comment.role === "admin" ? "bg-[#0E4B5B] text-white" : "bg-white border border-gray-200"
@@ -566,7 +483,7 @@ export default function Support() {
                     onChange={(e) => setReplyMessage(e.target.value)}
                     onKeyPress={(e) => e.key === "Enter" && !isSendingReply && handleSendReply()}
                     disabled={isSendingReply}
-                    className="flex-1 px-3 md:px-4 py-2.5 md:py-3 rounded-lg border-2 border-gray-200 focus:outline-none focus:border-[#0E4B5B] text-sm disabled:opacity-50 disabled:cursor-not-allowed"
+                    className="flex-1 px-3  md:px-4 py-2.5 md:py-3 rounded-lg border-2 border-gray-200 focus:outline-none focus:border-[#0E4B5B] text-sm disabled:opacity-50 disabled:cursor-not-allowed"
                   />
                   <button
                     onClick={handleSendReply}

@@ -195,6 +195,13 @@ export const authApi = {
     });
   },
 
+  changePassword: async (data: { currentPassword: string; newPassword: string }) => {
+    return apiRequest('/change-password', {
+      method: 'POST',
+      body: JSON.stringify(data),
+    });
+  },
+
   deleteAccount: async (data: { password: string; reason: string }) => {
     return apiRequest('/account', {
       method: 'DELETE',

@@ -4,7 +4,7 @@ import {
   BarChart, Bar
 } from 'recharts';
 
-import { Users, AlertCircle, Coins, Share2 } from 'lucide-react'; // <-- Updated
+import { Users, AlertCircle, Coins, Share2 } from 'lucide-react'; 
 
 const data = [
   { name: 'Jan', users: 400, complaints: 24 },
@@ -42,19 +42,9 @@ const StatCard = ({ title, value, icon: Icon, color }) => (
 export const Dashboard = () => {
   return (
     <div className="relative">
+    <div className="space-y-8 relative z-10">
 
-      {/* BACKGROUND EFFECTS */}
-      <div className="absolute inset-0 overflow-hidden pointer-events-none -z-0">
-        <div className="absolute top-20 left-10 w-2 h-2 bg-yellow-400 rounded-full animate-ping opacity-60"></div>
-        <div className="absolute top-40 right-20 text-yellow-200 text-2xl animate-bounce opacity-40" style={{ animationDuration: '4s' }}>★</div>
-        <div className="absolute bottom-1/4 left-1/3 w-3 h-3 bg-white rounded-full opacity-10 animate-pulse"></div>
-        <div className="absolute -top-10 right-1/4 w-96 h-96 bg-white/5 rounded-full mix-blend-overlay filter blur-3xl animate-pulse"></div>
-        <div className="absolute bottom-10 right-10 w-4 h-4 bg-purple-300 rounded-full opacity-20 animate-bounce" style={{ animationDelay: '2s' }}></div>
-      </div>
-
-      <div className="space-y-8 relative z-10">
-
-        {/* HEADER */}
+        {/* BANNER */}
         <div className="bg-gradient-to-r from-[#0E4B5B] to-[#1a6b7d] rounded-2xl p-6 lg:p-8 border border-[#0E4B5B]/30 shadow-lg relative overflow-hidden">
           <svg className="absolute inset-0 w-full h-full opacity-20" preserveAspectRatio="none" viewBox="0 0 1200 400">
             <defs>
@@ -111,7 +101,7 @@ export const Dashboard = () => {
                   </defs>
 
                   <XAxis dataKey="name" tick={{ fill: "#0E4B5B", fontWeight: 600 }} />
-                  <YAxis tick={{ fill: "#0E4B5B", fontWeight: 600 }} domain={[0, 1000]} />
+                  <YAxis tick={{ fill: "#28474fff", fontWeight: 600 }} domain={[0, 1000]} />
                   <CartesianGrid strokeDasharray="3 3" stroke="#cbd5e1" vertical={false} />
 
                   <Tooltip

@@ -1,7 +1,6 @@
 "use client"
 
-import type React from "react"
-import { useState } from "react"
+import React, { useState } from "react"
 import type { Navigation } from "../App"
 import { authApi } from "../utils/api"
 
@@ -11,9 +10,14 @@ interface Settings {
   marketingEmails: boolean
   sessionReminders: boolean
   privateProfile: boolean
-  allowMessages: boolean
-  theme: "light" | "dark"
+  allowMessages: "anyone" | "friends" | "none"
+  theme: string
   language: string
+}
+
+interface PrivacySecurityProps {
+  settings: Settings
+  setSettings: React.Dispatch<React.SetStateAction<Settings>>
 }
 
 interface Subscription {
@@ -24,6 +28,200 @@ interface Subscription {
   status: "active" | "canceled" | "past_due"
 }
 
+const PrivacySecurity: React.FC<PrivacySecurityProps> = ({ settings, setSettings }) => {
+  const [showPasswordModal, setShowPasswordModal] = useState(false)
+
+  // Password form states
+  const [currentPassword, setCurrentPassword] = useState("")
+  const [newPassword, setNewPassword] = useState("")
+  const [confirmNewPassword, setConfirmNewPassword] = useState("")
+  const [passwordMessage, setPasswordMessage] = useState("")
+  const [isChangingPassword, setIsChangingPassword] = useState(false)
+
+  // Handle password change
+  const handleChangePassword = async () => {
+    setPasswordMessage("")
+
+    if (!currentPassword || !newPassword || !confirmNewPassword) {
+      setPasswordMessage("All fields are required.")
+      return
+    }
+
+    if (newPassword !== confirmNewPassword) {
+      setPasswordMessage("New password and confirmation do not match.")
+      return
+    }
+
+    if (newPassword.length < 8) {
+      setPasswordMessage("Password must be at least 8 characters long.")
+      return
+    }
+
+    // Validate password requirements (uppercase, lowercase, number)
+    if (!/(?=.*[a-z])(?=.*[A-Z])(?=.*[0-9])/.test(newPassword)) {
+      setPasswordMessage("Password must include uppercase, lowercase, and a number.")
+      return
+    }
+
+    setIsChangingPassword(true)
+
+    try {
+      const response = await authApi.changePassword({
+        currentPassword,
+        newPassword,
+      })
+
+      if (response.success) {
+        setPasswordMessage("Password updated successfully!")
+        setTimeout(() => {
+          setShowPasswordModal(false)
+          setPasswordMessage("")
+          setCurrentPassword("")
+          setNewPassword("")
+          setConfirmNewPassword("")
+        }, 1200)
+      } else {
+        setPasswordMessage(response.message || "Failed to update password. Please try again.")
+      }
+    } catch (error: any) {
+      setPasswordMessage(error.message || "An error occurred. Please try again.")
+    } finally {
+      setIsChangingPassword(false)
+    }
+  }
+
+  // Update message setting
+  const handleSelectChange = (value: string) => {
+    setSettings((prev) => ({
+      ...prev,
+      allowMessages: value as Settings["allowMessages"],
+    }))
+  }
+
+  return (
+    <div className="bg-white rounded-xl shadow-sm overflow-hidden">
+      <div className="bg-gray-50 px-6 py-4 border-b border-gray-200">
+        <h2 className="text-lg font-bold text-gray-800">Privacy & Security</h2>
+      </div>
+
+      <div className="p-6 space-y-6">
+
+        {/* Change Password */}
+        <div className="flex items-center justify-between">
+          <div>
+            <h3 className="text-md font-semibold text-gray-800 mb-1">Change Password</h3>
+            <p className="text-sm text-gray-500">
+              Update your account password regularly to keep your account secure.
+            </p>
+          </div>
+          <button
+            onClick={() => setShowPasswordModal(true)}
+            className="bg-brand-teal text-white py-2 px-4 rounded-lg text-sm font-medium hover:bg-brand-teal/90 transition-colors whitespace-nowrap"
+          >
+            Change Password
+          </button>
+        </div>
+
+        <hr className="border-gray-200" />
+
+        {/* Who can message you */}
+        <div>
+          <label className="block text-md font-semibold text-gray-800 mb-2">
+            Who can send you messages?
+          </label>
+          <p className="text-sm text-gray-500 mb-2">
+            Control who is allowed to start a private conversation with you.
+          </p>
+
+          <select
+            value={settings.allowMessages}
+            onChange={(e) => handleSelectChange(e.target.value)}
+            className="w-full bg-gray-50 border border-gray-200 rounded-lg py-2 px-4 focus:outline-none focus:ring-2 focus:ring-brand-teal/50"
+          >
+            <option value="anyone">Anyone</option>
+            <option value="friends">Friends Only</option>
+            <option value="none">No one</option>
+          </select>
+        </div>
+      </div>
+
+      {/* Change Password Modal */}
+      {showPasswordModal && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+          <div className="bg-white rounded-xl shadow-lg p-6 w-full max-w-md">
+            <h2 className="text-xl font-bold text-gray-800 mb-4">Change Password</h2>
+
+            {passwordMessage && (
+              <div
+                className={`p-3 rounded-lg text-sm mb-4 ${
+                  passwordMessage.includes("successfully")
+                    ? "bg-green-100 text-green-700 border border-green-200"
+                    : "bg-red-100 text-red-700 border border-red-200"
+                }`}
+              >
+                {passwordMessage}
+              </div>
+            )}
+
+            <div className="space-y-3">
+              <input
+                type="password"
+                placeholder="Enter your current password"
+                value={currentPassword}
+                onChange={(e) => setCurrentPassword(e.target.value)}
+                className="w-full border border-gray-300 rounded-lg p-2"
+              />
+
+              <input
+                type="password"
+                placeholder="New Password (min 8 characters)"
+                value={newPassword}
+                onChange={(e) => setNewPassword(e.target.value)}
+                className="w-full border border-gray-300 rounded-lg p-2"
+              />
+
+              <input
+                type="password"
+                placeholder="Confirm New Password"
+                value={confirmNewPassword}
+                onChange={(e) => setConfirmNewPassword(e.target.value)}
+                className="w-full border border-gray-300 rounded-lg p-2"
+              />
+            </div>
+
+            <div className="flex justify-end gap-3 mt-6">
+              <button
+                className="px-4 py-2 bg-gray-200 rounded-lg text-gray-700"
+                onClick={() => {
+                  setShowPasswordModal(false)
+                  setCurrentPassword("")
+                  setNewPassword("")
+                  setConfirmNewPassword("")
+                  setPasswordMessage("")
+                }}
+              >
+                Cancel
+              </button>
+
+              <button
+                onClick={handleChangePassword}
+                disabled={isChangingPassword}
+                className={`bg-brand-teal text-white py-2 px-4 rounded-lg text-sm font-medium transition-colors ${
+                  isChangingPassword 
+                    ? "bg-brand-teal/50 cursor-not-allowed" 
+                    : "hover:bg-brand-teal/90"
+                }`}
+              >
+                {isChangingPassword ? "Updating..." : "Update Password"}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+    </div>
+  )
+}
+
 const SettingsPage: React.FC<{ navigation: Navigation }> = ({ navigation }) => {
   const [settings, setSettings] = useState<Settings>({
     emailNotifications: true,
@@ -31,7 +229,7 @@ const SettingsPage: React.FC<{ navigation: Navigation }> = ({ navigation }) => {
     marketingEmails: false,
     sessionReminders: true,
     privateProfile: false,
-    allowMessages: true,
+    allowMessages: "anyone",
     theme: "light",
     language: "en",
   })
@@ -48,26 +246,8 @@ const SettingsPage: React.FC<{ navigation: Navigation }> = ({ navigation }) => {
 
   const [showCancelModal, setShowCancelModal] = useState(false)
 
-  // Delete Account Modal States
-  const [showDeleteModal, setShowDeleteModal] = useState(false)
-  const [deleteReason, setDeleteReason] = useState("")
-  const [customReason, setCustomReason] = useState("")
-  const [deletePassword, setDeletePassword] = useState("")
-  const [deleteError, setDeleteError] = useState("")
-  const [isDeletingAccount, setIsDeletingAccount] = useState(false)
-
+  // Billing / subscription related
   const [billingEmail, setBillingEmail] = useState("")
-
-  const handleToggle = (key: keyof Settings) => {
-    if (typeof settings[key] === "boolean") {
-      setSettings((prev) => ({
-        ...prev,
-        [key]: !prev[key],
-      }))
-      setSavedMessage("Settings updated")
-      setTimeout(() => setSavedMessage(""), 3000)
-    }
-  }
 
   const handleToggleAutoRenew = () => {
     setSubscription((prev) => ({ ...prev, autoRenew: !prev.autoRenew }))
@@ -81,6 +261,14 @@ const SettingsPage: React.FC<{ navigation: Navigation }> = ({ navigation }) => {
     setSavedMessage("Subscription canceled")
     setTimeout(() => setSavedMessage(""), 3000)
   }
+
+  // Delete account states and handlers
+  const [showDeleteModal, setShowDeleteModal] = useState(false)
+  const [deleteReason, setDeleteReason] = useState("")
+  const [customReason, setCustomReason] = useState("")
+  const [deletePassword, setDeletePassword] = useState("")
+  const [deleteError, setDeleteError] = useState("")
+  const [isDeletingAccount, setIsDeletingAccount] = useState(false)
 
   const resetDeleteForm = () => {
     setDeleteReason("")
@@ -99,7 +287,6 @@ const SettingsPage: React.FC<{ navigation: Navigation }> = ({ navigation }) => {
     resetDeleteForm()
   }
 
-  // Delete Account Logic
   const handleDeleteAccount = async () => {
     const finalReason = (deleteReason === "other" ? customReason : deleteReason)?.trim() || ""
 
@@ -137,70 +324,20 @@ const SettingsPage: React.FC<{ navigation: Navigation }> = ({ navigation }) => {
     }
   }
 
-  const handleSelectChange = (key: keyof Settings, value: string) => {
-    setSettings((prev) => ({
-      ...prev,
-      [key]: value,
-    }))
-    setSavedMessage("Settings updated")
-    setTimeout(() => setSavedMessage(""), 3000)
-  }
-
-  const SettingToggle: React.FC<{ label: string; description: string; settingKey: keyof Settings }> = ({
-    label,
-    description,
-    settingKey,
-  }) => (
-    <div className="flex items-center justify-between p-4 border-b border-gray-200 last:border-b-0 hover:bg-gray-50 transition-colors">
-      <div>
-        <p className="font-medium text-gray-800">{label}</p>
-        <p className="text-sm text-gray-500">{description}</p>
-      </div>
-      <label className="relative inline-flex items-center cursor-pointer">
-        <input
-          type="checkbox"
-          checked={settings[settingKey] as boolean}
-          onChange={() => handleToggle(settingKey)}
-          className="sr-only peer"
-        />
-        <div className="w-11 h-6 bg-gray-300 peer-focus:outline-none peer-focus:ring-2 peer-focus:ring-brand-teal/50 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-brand-teal" />
-      </label>
-    </div>
-  )
-
   return (
     <div className="space-y-6">
-      {/* Header */}
       <div>
         <h1 className="text-3xl font-bold text-white">Settings</h1>
       </div>
 
-      {/* Save Message */}
       {savedMessage && (
         <div className="bg-green-100 text-green-700 p-4 rounded-lg border border-green-200">✓ {savedMessage}</div>
       )}
 
-      {/* Preferences */}
-      <div className="bg-white rounded-xl shadow-sm overflow-hidden">
-        <div className="bg-gray-50 px-6 py-4 border-b border-gray-200">
-          <h2 className="text-lg font-bold text-gray-800">Preferences</h2>
-        </div>
-        <div className="p-6 space-y-4">
-          <div>
-            <label className="block text-sm font-medium text-gray-700 mb-2">Theme</label>
-            <select
-              value={settings.theme}
-              onChange={(e) => handleSelectChange("theme", e.target.value)}
-              className="w-full bg-gray-50 border border-gray-200 rounded-lg py-2 px-4 focus:outline-none focus:ring-2 focus:ring-brand-teal/50"
-            >
-              <option value="light">Light</option>
-              <option value="dark">Dark</option>
-            </select>
-          </div>
-        </div>
-      </div>
+      {/* Privacy & Security (from provided component) */}
+      <PrivacySecurity settings={settings} setSettings={setSettings} />
 
-      {/* Subscription */}
+      {/* Subscription Card */}
       <div className="bg-white rounded-xl shadow-sm overflow-hidden">
         <div className="bg-gray-50 px-6 py-4 border-b border-gray-200">
           <h2 className="text-lg font-bold text-gray-800">Subscription</h2>
@@ -222,13 +359,11 @@ const SettingsPage: React.FC<{ navigation: Navigation }> = ({ navigation }) => {
             </div>
           </div>
 
-          {/* Auto Renew */}
           <label className="flex items-center gap-2">
             <input type="checkbox" checked={subscription.autoRenew} onChange={handleToggleAutoRenew} />
             <span className="text-sm text-gray-600">Auto renew</span>
           </label>
 
-          {/* Billing + Manage + Cancel (Side by Side) */}
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mt-4">
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-2">Billing Email</label>
@@ -241,23 +376,21 @@ const SettingsPage: React.FC<{ navigation: Navigation }> = ({ navigation }) => {
               />
             </div>
 
-            {/* SIDE BY SIDE BUTTONS */}
             <div>
               <p className="block text-sm font-medium text-gray-700 mb-2">Manage</p>
-             <div className="flex justify-between mt-4">
-  <button className="bg-white border border-gray-300 px-4 py-2 rounded-lg text-sm font-medium text-gray-700 hover:bg-gray-100 hover:shadow-sm transition-all">
-    Manage Payment Methods
-  </button>
+              <div className="flex justify-between mt-4">
+                <button className="bg-white border border-gray-300 px-4 py-2 rounded-lg text-sm font-medium text-gray-700 hover:bg-gray-100 hover:shadow-sm transition-all">
+                  Manage Payment Methods
+                </button>
 
-  <button
-    onClick={() => setShowCancelModal(true)}
-    className="bg-red-600 text-white px-4 py-2 rounded-lg text-sm"
-    disabled={subscription.status !== "active"}
-  >
-    Cancel Subscription
-  </button>
-</div>
-
+                <button
+                  onClick={() => setShowCancelModal(true)}
+                  className="bg-red-600 text-white px-4 py-2 rounded-lg text-sm"
+                  disabled={subscription.status !== "active"}
+                >
+                  Cancel Subscription
+                </button>
+              </div>
             </div>
           </div>
         </div>
@@ -280,11 +413,9 @@ const SettingsPage: React.FC<{ navigation: Navigation }> = ({ navigation }) => {
       {showDeleteModal && (
         <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
           <div className="bg-white rounded-xl shadow-lg p-6 w-full max-w-md">
-            
             <h2 className="text-xl font-bold text-gray-800 mb-4">Delete Account</h2>
             <p className="text-gray-600 mb-4">Please choose a reason and confirm your password.</p>
 
-            {/* Reason Dropdown */}
             <div className="mb-3">
               <label className="block text-sm font-medium text-gray-700 mb-1">Reason</label>
               <select
@@ -304,7 +435,6 @@ const SettingsPage: React.FC<{ navigation: Navigation }> = ({ navigation }) => {
               </select>
             </div>
 
-            {/* Custom Reason */}
             {deleteReason === "other" && (
               <div className="mb-3">
                 <textarea
@@ -319,7 +449,6 @@ const SettingsPage: React.FC<{ navigation: Navigation }> = ({ navigation }) => {
               </div>
             )}
 
-            {/* Password */}
             <div className="mb-4">
               <label className="block text-sm font-medium text-gray-700 mb-1">Confirm Password</label>
               <input

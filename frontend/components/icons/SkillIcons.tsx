@@ -37,8 +37,37 @@ export const MobileDevIcon: React.FC<React.SVGProps<SVGSVGElement>> = (props) =>
 
 // For Artificial Intelligence
 export const BrainIcon: React.FC<React.SVGProps<SVGSVGElement>> = (props) => (
-  <svg {...props} xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth="1.5" stroke="currentColor" >
-    <path strokeLinecap="round" strokeLinejoin="round" d="M9.5 13.5c0 1.657 1.343 3 3 3s3-1.343 3-3 .224-6-3-6-3 4.343-3 6z" />
-    <path strokeLinecap="round" strokeLinejoin="round" d="M12 3C8.686 3 6 5.686 6 9c0 1.831.816 3.483 2.077 4.544.757-.44 1.63-.733 2.573-.837m1.814-2.88a14.903 14.903 0 013.536-1.827C17.184 7.816 18 6.169 18 4.5 18 3.672 17.328 3 16.5 3c-.537 0-1.01.28-1.28.7L12 7.5M6 9c0-1.667.667-3.167 1.76-4.24M12 21c-3.314 0-6-2.686-6-6 0-1.831.816-3.483 2.077-4.544m3.846.127A11.95 11.95 0 0012 10.5c-1.5 0-2.897.273-4.16.75M12 21c3.314 0 6-2.686 6-6 0-1.831-.816-3.483-2.077-4.544m-1.769 4.671a12.016 12.016 0 01-1.28.373" />
+  <svg
+    {...props}
+    xmlns="http://www.w3.org/2000/svg"
+    viewBox="0 0 24 24"
+  >
+    {/* Center AI text */}
+    <text
+      x="50%"
+      y="50%"
+      dominantBaseline="middle"
+      textAnchor="middle"
+      fontSize="14"
+      fontWeight="bold"
+      fill="currentColor"
+      fontFamily="sans-serif"
+    >
+      AI
+    </text>
+
+    {/* Star 1 (top-left) */}
+    <circle cx="6" cy="6" r="1.2" fill="yellow" />
+    <line x1="6" y1="4.5" x2="6" y2="7.5" stroke="pink" strokeWidth={0.5} />
+    <line x1="4.5" y1="6" x2="7.5" y2="6" stroke="pink" strokeWidth={0.5} />
+
+    {/* Star 2 (bottom-right) */}
+    <circle cx="18" cy="18" r="1.2" fill="yellow" />
+    <line x1="18" y1="16.5" x2="18" y2="19.5" stroke="pink" strokeWidth={0.5} />
+    <line x1="16.5" y1="18" x2="19.5" y2="18" stroke="pink" strokeWidth={0.5} />
   </svg>
 );
+
+
+
+

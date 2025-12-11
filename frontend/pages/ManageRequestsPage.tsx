@@ -4,6 +4,7 @@ import type React from "react"
 import { useState } from "react"
 import type { Navigation } from "../App"
 import { SearchIcon } from "../components/icons/MiscIcons"
+import { Page } from "../App" // Import Page enum for navigation
 
 interface Request {
   id: string
@@ -237,7 +238,12 @@ const ManageRequestsPage: React.FC<{ navigation: Navigation }> = ({ navigation }
                   <p className="text-xs text-gray-500">{fr.skill}</p>
                 </div>
                 <div className="flex flex-col gap-2">
-                  <button className="text-sm bg-brand-teal text-white px-3 py-1 rounded-lg">Message</button>
+                  <button 
+                    onClick={() => navigation.navigateTo(Page.Messenger)} // Redirect to Messenger page
+                    className="text-sm bg-brand-teal text-white px-3 py-1 rounded-lg"
+                  >
+                    Message
+                  </button>
                   <button onClick={() => removeFriend(fr.id)} className="text-sm bg-gray-100 px-3 py-1 rounded-lg">Remove</button>
                 </div>
               </div>

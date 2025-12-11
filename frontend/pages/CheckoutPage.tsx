@@ -57,12 +57,7 @@ const CheckoutPage: React.FC<{ navigation: Navigation; plan?: Plan }> = ({ navig
       <div className="container mx-auto px-4 max-w-4xl">
         {/* Header */}
         <div className="mb-8">
-          <button
-            onClick={() => navigation.navigateTo(Page.Home)}
-            className="text-brand-teal hover:text-brand-teal-dark font-medium mb-4 flex items-center gap-2"
-          >
-            ← Back
-          </button>
+        
           <h1 className="text-4xl font-bold text-brand-teal">Complete Your Purchase</h1>
         </div>
 

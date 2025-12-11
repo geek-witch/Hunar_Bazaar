@@ -35,4 +35,3 @@ npm start
 - Passwords must be at least 8 characters and include uppercase, lowercase, and a number
 - Users must be at least 10 years old to sign up
 - Email verification is required before login
-
