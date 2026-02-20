@@ -51,7 +51,7 @@ const MultiSelectDropdown: React.FC<{
 
   return (
     <div className="relative" ref={dropdownRef}>
-      <div 
+      <div
         className="w-full px-3 py-2 border border-gray-300 rounded-md bg-white flex flex-wrap items-center gap-2 cursor-text"
         onClick={() => setIsOpen(true)}
       >
@@ -96,7 +96,7 @@ const MultiSelectDropdown: React.FC<{
               </div>
             ))
           ) : (
-             <div className="px-4 py-2 text-gray-500">No options found</div>
+            <div className="px-4 py-2 text-gray-500">No options found</div>
           )}
         </div>
       )}
@@ -119,7 +119,7 @@ const AvailabilitySelector: React.FC<{
     setNewSlot(prev => ({ ...prev, [field]: value }));
     setError('');
   };
-  
+
   const handleDayToggle = (day: string) => {
     setNewSlot(prev => {
       const newDays = prev.days.includes(day)
@@ -135,7 +135,7 @@ const AvailabilitySelector: React.FC<{
       setError('Please select start time, end time, and at least one day.');
       return false;
     }
-    
+
     const start = newSlot.startTime;
     const end = newSlot.endTime;
 
@@ -158,7 +158,7 @@ const AvailabilitySelector: React.FC<{
       ...prevAvail,
       { ...newSlot, id: Date.now() + Math.random() }, // Assign a unique ID
     ]);
-    
+
     // Reset the input fields, but keep days selected for potential quick add
     setNewSlot(prev => ({ ...prev, startTime: '', endTime: '' }));
   };
@@ -166,7 +166,7 @@ const AvailabilitySelector: React.FC<{
   const handleRemoveSlot = (id: number) => {
     setAvailability(prevAvail => prevAvail.filter(slot => slot.id !== id));
   };
-  
+
   const formatTime = (time: string): string => {
     if (!time) return '';
     try {
@@ -184,7 +184,7 @@ const AvailabilitySelector: React.FC<{
     <div className="space-y-4">
       <div className="border border-gray-300 rounded-lg p-4 bg-gray-50">
         <h3 className="font-semibold text-gray-800 mb-2">Add Availability Slot</h3>
-        
+
         {/* Day Selector */}
         <label className="block text-sm font-medium text-gray-700 mb-1">Select Day(s)</label>
         <div className="flex flex-wrap gap-2 mb-4">
@@ -193,41 +193,40 @@ const AvailabilitySelector: React.FC<{
               key={day}
               type="button"
               onClick={() => handleDayToggle(day)}
-              className={`px-3 py-1 text-xs rounded-full transition duration-150 border ${
-                newSlot.days.includes(day) 
-                  ? 'bg-brand-teal text-white border-brand-teal hover:bg-brand-teal-dark' 
-                  : 'bg-white text-gray-700 border-gray-300 hover:bg-gray-100'
-              }`}
+              className={`px-3 py-1 text-xs rounded-full transition duration-150 border ${newSlot.days.includes(day)
+                ? 'bg-brand-teal text-white border-brand-teal hover:bg-brand-teal-dark'
+                : 'bg-white text-gray-700 border-gray-300 hover:bg-gray-100'
+                }`}
             >
               {day}
             </button>
           ))}
         </div>
-        
+
         {/* Time Selector */}
         <div className="flex space-x-4 mb-4">
           <div className="flex-1">
             <label htmlFor="start-time" className="block text-sm font-medium text-gray-700">From (Start Time)</label>
-            <input 
+            <input
               id="start-time"
-              type="time" 
-              value={newSlot.startTime} 
+              type="time"
+              value={newSlot.startTime}
               onChange={(e) => handleSlotChange('startTime', e.target.value)}
               className="mt-1 block w-full border border-gray-300 rounded-md p-2 shadow-sm focus:ring-brand-teal focus:border-brand-teal sm:text-sm"
             />
           </div>
           <div className="flex-1">
             <label htmlFor="end-time" className="block text-sm font-medium text-gray-700">To (End Time)</label>
-            <input 
+            <input
               id="end-time"
-              type="time" 
-              value={newSlot.endTime} 
+              type="time"
+              value={newSlot.endTime}
               onChange={(e) => handleSlotChange('endTime', e.target.value)}
               className="mt-1 block w-full border border-gray-300 rounded-md p-2 shadow-sm focus:ring-brand-teal focus:border-brand-teal sm:text-sm"
             />
           </div>
         </div>
-        
+
         <button
           type="button"
           onClick={handleAddSlot}
@@ -243,8 +242,8 @@ const AvailabilitySelector: React.FC<{
         <div className="border border-gray-200 rounded-lg p-3 space-y-3 max-h-52 overflow-y-auto">
           <p className="text-sm font-medium text-gray-700">Your Current Availability:</p>
           {availability.map(slot => (
-            <div 
-              key={slot.id} 
+            <div
+              key={slot.id}
               className="flex justify-between items-center bg-white p-3 border rounded-md shadow-sm"
             >
               <div>
@@ -255,13 +254,13 @@ const AvailabilitySelector: React.FC<{
                   {slot.days.sort((a, b) => DAYS_OF_WEEK.indexOf(a) - DAYS_OF_WEEK.indexOf(b)).join(', ')}
                 </p>
               </div>
-              <button 
-                type="button" 
-                onClick={() => handleRemoveSlot(slot.id)} 
+              <button
+                type="button"
+                onClick={() => handleRemoveSlot(slot.id)}
                 className="text-gray-400 hover:text-red-500 p-1"
                 title="Remove slot"
               >
-                <XCircleIcon className="h-6 w-6"/>
+                <XCircleIcon className="h-6 w-6" />
               </button>
             </div>
           ))}
@@ -274,7 +273,7 @@ const AvailabilitySelector: React.FC<{
 const SignupStep2Page: React.FC<{ navigation: Navigation }> = ({ navigation }) => {
   const [teachSkills, setTeachSkills] = useState<string[]>([]);
   const [learnSkills, setLearnSkills] = useState<string[]>([]);
- const [availability, setAvailability] = useState<AvailabilitySlot[]>([]);
+  const [availability, setAvailability] = useState<AvailabilitySlot[]>([]);
   const [bio, setBio] = useState<string>('');
   const [profilePic, setProfilePic] = useState<File | null>(null);
   const [socialLinks, setSocialLinks] = useState<string[]>(['']);
@@ -283,15 +282,15 @@ const SignupStep2Page: React.FC<{ navigation: Navigation }> = ({ navigation }) =
   const [generalError, setGeneralError] = useState('');
   const [skillsList, setSkillsList] = useState<string[]>([]);
   const [skillsLoading, setSkillsLoading] = useState(true);
-  const [availabilityError, setAvailabilityError] = useState(''); 
+  const [availabilityError, setAvailabilityError] = useState('');
 
   const [errors, setErrors] = useState({
-      teachSkills: '', 
-      learnSkills: '',
-      availability: '',
-      bio: '',
-      profilePic: '',
-      socialLinks: '',
+    teachSkills: '',
+    learnSkills: '',
+    availability: '',
+    bio: '',
+    profilePic: '',
+    socialLinks: '',
   });
 
   useEffect(() => {
@@ -306,7 +305,7 @@ const SignupStep2Page: React.FC<{ navigation: Navigation }> = ({ navigation }) =
       try {
         setSkillsLoading(true);
         const response = await authApi.getAllSkills();
-        
+
         let skillsArray: string[] = [];
         if (response.success) {
           if (Array.isArray(response.data)) {
@@ -317,7 +316,7 @@ const SignupStep2Page: React.FC<{ navigation: Navigation }> = ({ navigation }) =
             skillsArray = response.data.data;
           }
         }
-        
+
         if (skillsArray.length > 0) {
           const cleanedSkills = skillsArray
             .filter(skill => skill != null && typeof skill === 'string')
@@ -357,31 +356,31 @@ const SignupStep2Page: React.FC<{ navigation: Navigation }> = ({ navigation }) =
   };
 
   const validate = () => {
-    const newErrors = { 
-        teachSkills: '', 
-        learnSkills: '', 
-        availability: availabilityError, // Start with any error from the selector
-        bio: '', 
-        profilePic: '', 
-        socialLinks: '' 
+    const newErrors = {
+      teachSkills: '',
+      learnSkills: '',
+      availability: availabilityError, // Start with any error from the selector
+      bio: '',
+      profilePic: '',
+      socialLinks: ''
     };
     let isValid = true;
-    
-     if (bio.trim().length < 20 || bio.trim().length > 500) {
+
+    if (bio.trim().length < 20 || bio.trim().length > 500) {
       newErrors.bio = 'Bio must be between 20 and 500 characters.';
       isValid = false;
     }
-    
+
     // --- Updated availability validation ---
     if (availability.length === 0) {
-        newErrors.availability = 'Please add at least one time slot for your availability.';
-        isValid = false;
+      newErrors.availability = 'Please add at least one time slot for your availability.';
+      isValid = false;
     } else if (availabilityError) {
-        // If there is an error reported by the selector component (e.g., incomplete slot being added)
-        isValid = false;
+      // If there is an error reported by the selector component (e.g., incomplete slot being added)
+      isValid = false;
     }
     // --------------------------------------
-    
+
     if (teachSkills.length === 0) {
       newErrors.teachSkills = 'Please select at least one skill you can teach.';
       isValid = false;
@@ -391,29 +390,35 @@ const SignupStep2Page: React.FC<{ navigation: Navigation }> = ({ navigation }) =
       isValid = false;
     }
 
-    // Validate only non-empty social links
-    const invalidLinks = socialLinks.filter(link => link.trim() !== '' && !/^(https?:\/\/)?(www\.)?([a-zA-Z0-9-]+\.){1,}[a-zA-Z]{2,}(\/[^\s]*)?$/.test(link));
-    if (invalidLinks.length > 0) {
-      newErrors.socialLinks = 'One or more social links are invalid. Please use a valid URL format or leave empty.';
+    // Require at least one non-empty social link and validate all provided links
+    const trimmedLinks = socialLinks.map(l => l.trim()).filter(l => l !== '');
+    if (trimmedLinks.length === 0) {
+      newErrors.socialLinks = 'Please provide at least one social link.';
       isValid = false;
+    } else {
+      const invalidLinks = trimmedLinks.filter(link => !/^(https?:\/\/)?(www\.)?([a-zA-Z0-9-]+\.){1,}[a-zA-Z]{2,}(\/[^\s]*)?$/.test(link));
+      if (invalidLinks.length > 0) {
+        newErrors.socialLinks = 'One or more social links are invalid. Please use a valid URL format.';
+        isValid = false;
+      }
     }
 
     setErrors(newErrors);
     return isValid;
   }
-  
+
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     if (e.target.files && e.target.files[0]) {
       const file = e.target.files[0];
-      const maxSize = 10 * 1024 * 1024; 
-      
+      const maxSize = 5 * 1024 * 1024;
+
       if (file.size > maxSize) {
-        setErrors(prev => ({ ...prev, profilePic: 'File size exceeds 10MB limit. Please choose a smaller image.' }));
+        setErrors(prev => ({ ...prev, profilePic: 'File size exceeds 5MB limit. Please choose a smaller image.' }));
         setProfilePic(null);
         e.target.value = '';
         return;
       }
-      
+
       const validTypes = ['image/png', 'image/jpeg', 'image/jpg', 'image/gif'];
       if (!validTypes.includes(file.type)) {
         setErrors(prev => ({ ...prev, profilePic: 'Invalid file type. Please upload PNG, JPG, or GIF only.' }));
@@ -421,7 +426,7 @@ const SignupStep2Page: React.FC<{ navigation: Navigation }> = ({ navigation }) =
         e.target.value = '';
         return;
       }
-      
+
       setErrors(prev => ({ ...prev, profilePic: '' }));
       setProfilePic(file);
     }
@@ -430,17 +435,17 @@ const SignupStep2Page: React.FC<{ navigation: Navigation }> = ({ navigation }) =
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setGeneralError('');
-    
+
     if (isSubmitting) {
       return; // Prevent double submission
     }
-    
+
     if (!validate()) {
       return;
     }
 
     const signupDataStr = localStorage.getItem('signupData');
-    
+
     if (!signupDataStr) {
       setGeneralError('Session expired. Please start over.');
       navigation.navigateTo(Page.Signup1);
@@ -457,58 +462,111 @@ const SignupStep2Page: React.FC<{ navigation: Navigation }> = ({ navigation }) =
     };
 
     const signupData = JSON.parse(signupDataStr) as StoredSignupData;
-    
+
     // Validate that all required signup data is present
     if (!signupData.firstName || !signupData.lastName || !signupData.dob || !signupData.email || !signupData.password) {
       setGeneralError('Session expired. Please start over.');
       navigation.navigateTo(Page.Signup1);
       return;
     }
-    
+
     setIsLoading(true);
     setIsSubmitting(true);
     try {
-      let profilePicBase64 = null;
+      let profilePicBase64: string | null = null;
       if (profilePic) {
-        const reader = new FileReader();
-        profilePicBase64 = await new Promise<string>((resolve, reject) => {
-          reader.onload = () => resolve(reader.result as string);
-          reader.onerror = reject;
-          reader.readAsDataURL(profilePic);
-        });
+        // Simple file reader for small files
+        if (profilePic.size < 500 * 1024) {
+          const reader = new FileReader();
+          profilePicBase64 = await new Promise<string>((resolve, reject) => {
+            reader.onload = () => resolve(reader.result as string);
+            reader.onerror = reject;
+            reader.readAsDataURL(profilePic);
+          });
+        } else {
+          // Compress larger images
+          profilePicBase64 = await new Promise<string>((resolve, reject) => {
+            const reader = new FileReader();
+            reader.readAsDataURL(profilePic);
+            reader.onload = (event) => {
+              const img = new Image();
+              img.src = event.target?.result as string;
+              img.onload = () => {
+                const canvas = document.createElement('canvas');
+                const MAX_WIDTH = 800;
+                const MAX_HEIGHT = 800;
+                let width = img.width;
+                let height = img.height;
+
+                if (width > height) {
+                  if (width > MAX_WIDTH) {
+                    height *= MAX_WIDTH / width;
+                    width = MAX_WIDTH;
+                  }
+                } else {
+                  if (height > MAX_HEIGHT) {
+                    width *= MAX_HEIGHT / height;
+                    height = MAX_HEIGHT;
+                  }
+                }
+                canvas.width = width;
+                canvas.height = height;
+                const ctx = canvas.getContext('2d');
+                if (ctx) {
+                  ctx.drawImage(img, 0, 0, width, height);
+                  // Compress to JPEG with 0.7 quality
+                  resolve(canvas.toDataURL('image/jpeg', 0.7));
+                } else {
+                  reject(new Error('Canvas context not available'));
+                }
+              };
+              img.onerror = (error) => reject(error);
+            };
+            reader.onerror = (error) => reject(error);
+          });
+        }
       }
 
-      const validSocialLinks = socialLinks.filter(link => link.trim() !== '');
+      const validSocialLinks = socialLinks.map(l => l.trim()).filter(link => link !== '');
 
-      const response = await authApi.signupAndCompleteProfile({
-        firstName: signupData.firstName,
-        lastName: signupData.lastName,
-        dob: signupData.dob,
-        email: signupData.email,
-        password: signupData.password,
+      // Store complete profile data in localStorage for verification step
+      const completeSignupData = {
+        ...signupData,
         bio,
         teachSkills,
         learnSkills,
-        availability: availability, 
-        socialLinks: validSocialLinks.length > 0 ? validSocialLinks : undefined,
+        availability,
+        socialLinks: validSocialLinks,
         profilePic: profilePicBase64,
+      };
+
+      try {
+        localStorage.setItem('completeSignupData', JSON.stringify(completeSignupData));
+      } catch (storageError) {
+        console.error('Storage quota exceeded:', storageError);
+        setGeneralError('Your profile picture is too large for local storage. Please choose a smaller image.');
+        setIsLoading(false);
+        setIsSubmitting(false);
+        return;
+      }
+      localStorage.setItem('signupEmail', signupData.email);
+
+      // Send OTP without creating user
+      const response = await authApi.sendSignupOTP({
+        email: signupData.email,
       });
 
       if (response.success) {
-        localStorage.removeItem('signupData');
-        localStorage.removeItem('signupUserId');
-        localStorage.removeItem('signupEmail');
-        
-        if (response.data && typeof response.data === 'object' && 'email' in response.data) {
-          localStorage.setItem('signupEmail', response.data.email as string);
-        }
-        
-        navigation.navigateTo(Page.Verify);
+        navigation.showNotification('OTP sent to your email');
+        // Small delay to show the notification before navigating
+        setTimeout(() => {
+          navigation.navigateTo(Page.Verify);
+        }, 500);
       } else {
-        setGeneralError(response.message || 'Failed to create account. Please try again.');
+        setGeneralError(response.message || 'Failed to send OTP. Please try again.');
       }
     } catch (error: any) {
-      console.error('Account creation error:', error);
+      console.error('Error sending OTP:', error);
       setGeneralError('An error occurred. Please try again.');
     } finally {
       setIsLoading(false);
@@ -535,123 +593,131 @@ const SignupStep2Page: React.FC<{ navigation: Navigation }> = ({ navigation }) =
             {/* Left Side */}
             <div>
               <label className="block text-sm font-medium text-gray-700">Upload your Picture</label>
-              <div className="mt-1 flex justify-center px-6 pt-5 pb-6 border-2 border-gray-300 border-dashed rounded-md">
-                <div className="space-y-1 text-center">
+              <div className="mt-1 border-2 border-gray-300 border-dashed rounded-md hover:border-brand-teal transition-colors">
+                <label
+                  htmlFor="file-upload"
+                  className="cursor-pointer flex flex-col items-center justify-center px-6 pt-5 pb-6 w-full h-full"
+                >
                   <UploadIcon className="mx-auto h-12 w-12 text-gray-400" />
-                  <div className="flex text-sm text-gray-600">
-                    <label htmlFor="file-upload" className="relative cursor-pointer bg-white rounded-md font-medium text-brand-teal hover:text-brand-teal-dark focus-within:outline-none">
-                      <span>Upload a file</span>
-                      <input id="file-upload" name="file-upload" type="file" className="sr-only" onChange={handleFileChange} accept="image/png, image/jpeg, image/gif" />
-                    </label>
+                  <div className="flex text-sm text-gray-600 mt-2">
+                    <span className="font-medium text-brand-teal hover:text-brand-teal-dark">Upload a file</span>
                     <p className="pl-1">or drag and drop</p>
                   </div>
                   <p className="text-xs text-gray-500">PNG, JPG, GIF up to 10MB</p>
-                   {profilePic && <p className="text-sm text-gray-600 mt-2 font-medium">{profilePic.name}</p>}
-                </div>
+                  {profilePic && (
+                    <p className="text-sm text-brand-teal mt-2 font-semibold bg-brand-light-blue px-2 py-1 rounded">
+                      Selected: {profilePic.name}
+                    </p>
+                  )}
+                  <input
+                    id="file-upload"
+                    name="file-upload"
+                    type="file"
+                    className="sr-only"
+                    onChange={handleFileChange}
+                    accept="image/png, image/jpeg, image/gif"
+                  />
+                </label>
               </div>
               {errors.profilePic && <p className="text-red-500 text-xs mt-1">{errors.profilePic}</p>}
-
 
               <div className="mt-6">
                 <label htmlFor="bio" className="block text-sm font-medium text-gray-700">Short Bio</label>
                 <textarea id="bio" name="bio" rows={3} className="shadow-sm focus:ring-brand-teal focus:border-brand-teal mt-1 block w-full sm:text-sm border border-gray-300 rounded-md p-2" placeholder="Tell us about yourself..." value={bio} onChange={e => setBio(e.target.value)} />
                 {errors.bio && <p className="text-red-500 text-xs mt-1">{errors.bio}</p>}
               </div>
+              {/* Social Links (also available on right column) - added under Bio as requested */}
+              <div className="mt-4">
+                <label className="block text-sm font-medium text-gray-700 mb-1">Social Links</label>
+                <div className="space-y-2 mt-1">
+                  {socialLinks.map((link, index) => (
+                    <div key={index} className="flex items-center space-x-2">
+                      <input
+                        type="url"
+                        value={link}
+                        onChange={(e) => handleLinkChange(index, e.target.value)}
+                        placeholder="https://linkedin.com/in/your-profile"
+                        className="block w-full sm:text-sm border border-gray-300 rounded-md p-2"
+                      />
+                      {socialLinks.length > 1 && (
+                        <button type="button" onClick={() => handleRemoveLink(index)} className="text-gray-400 hover:text-red-500" title="Remove link">
+                          <XCircleIcon className="h-6 w-6" />
+                        </button>
+                      )}
+                    </div>
+                  ))}
+                </div>
+                <button type="button" onClick={handleAddLink} className="mt-2 flex items-center text-sm font-medium text-brand-teal hover:text-brand-teal-dark">
+                  <PlusCircleIcon className="h-5 w-5 mr-1" /> Add another link
+                </button>
+                {errors.socialLinks && <p className="text-red-500 text-xs mt-1">{errors.socialLinks}</p>}
+              </div>
             </div>
-            
+
             {/* Right Side */}
             <div className="space-y-6">
-               <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">Skills you can Teach</label>
-                  {skillsLoading ? (
-                    <div className="w-full px-3 py-2 border border-gray-300 rounded-md bg-gray-50 text-gray-500">
-                      Loading skills...
-                    </div>
-                  ) : skillsList.length === 0 ? (
-                    <div className="w-full px-3 py-2 border border-red-300 rounded-md bg-red-50 text-red-600 text-sm">
-                      No skills available. Please check your connection or contact support.
-                    </div>
-                  ) : (
-                    <MultiSelectDropdown
-                      options={skillsList}
-                      selectedOptions={teachSkills}
-                      setSelectedOptions={setTeachSkills}
-                      placeholder="e.g., Python, Graphic Design"
-                    />
-                  )}
-                  {errors.teachSkills && <p className="text-red-500 text-xs mt-1">{errors.teachSkills}</p>}
-                </div>
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">Skills you want to Learn</label>
-                  {skillsLoading ? (
-                    <div className="w-full px-3 py-2 border border-gray-300 rounded-md bg-gray-50 text-gray-500">
-                      Loading skills...
-                    </div>
-                  ) : skillsList.length === 0 ? (
-                    <div className="w-full px-3 py-2 border border-red-300 rounded-md bg-red-50 text-red-600 text-sm">
-                      No skills available. Please check your connection or contact support.
-                    </div>
-                  ) : (
-                    <MultiSelectDropdown
-                      options={skillsList}
-                      selectedOptions={learnSkills}
-                      setSelectedOptions={setLearnSkills}
-                      placeholder="e.g., Spanish, Public Speaking"
-                    />
-                  )}
-                  {errors.learnSkills && <p className="text-red-500 text-xs mt-1">{errors.learnSkills}</p>}
-                </div>
-                
-                {/* --- Replaced Availability Field with Time Range Selector --- */}
-                 <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">Your Availability Time Slots</label>
-                  <AvailabilitySelector 
-                    availability={availability} 
-                    setAvailability={setAvailability}
-                    setError={setAvailabilityError}
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">Skills you can Teach</label>
+                {skillsLoading ? (
+                  <div className="w-full px-3 py-2 border border-gray-300 rounded-md bg-gray-50 text-gray-500">
+                    Loading skills...
+                  </div>
+                ) : skillsList.length === 0 ? (
+                  <div className="w-full px-3 py-2 border border-red-300 rounded-md bg-red-50 text-red-600 text-sm">
+                    No skills available. Please check your connection or contact support.
+                  </div>
+                ) : (
+                  <MultiSelectDropdown
+                    options={skillsList}
+                    selectedOptions={teachSkills}
+                    setSelectedOptions={setTeachSkills}
+                    placeholder="e.g., Python, Graphic Design"
                   />
-                  {(errors.availability || availabilityError) && <p className="text-red-500 text-xs mt-1">{errors.availability || availabilityError}</p>}
-                </div>
-                {/* --------------------------------------------------------- */}
-                
-                <div>
-                    <label className="block text-sm font-medium text-gray-700">Social Links (Optional)</label>
-                    <div className="space-y-2 mt-1">
-                        {socialLinks.map((link, index) => (
-                            <div key={index} className="flex items-center space-x-2">
-                                <input
-                                    type="url"
-                                    value={link}
-                                    onChange={(e) => handleLinkChange(index, e.target.value)}
-                                    placeholder="https://linkedin.com/in/your-profile"
-                                    className="block w-full sm:text-sm border border-gray-300 rounded-md p-2"
-                                />
-                                {socialLinks.length > 1 && (
-                                     <button type="button" onClick={() => handleRemoveLink(index)} className="text-gray-400 hover:text-red-500" title="Remove link">
-                                         <XCircleIcon className="h-6 w-6"/>
-                                     </button>
-                                )}
-                            </div>
-                        ))}
-                    </div>
-                    <button
-                        type="button"
-                        onClick={handleAddLink}
-                        className="mt-2 flex items-center text-sm font-medium text-brand-teal hover:text-brand-teal-dark"
-                    >
-                        <PlusCircleIcon className="h-5 w-5 mr-1" />
-                        Add another link
-                    </button>
-                    {errors.socialLinks && <p className="text-red-500 text-xs mt-1">{errors.socialLinks}</p>}
-                </div>
+                )}
+                {errors.teachSkills && <p className="text-red-500 text-xs mt-1">{errors.teachSkills}</p>}
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">Skills you want to Learn</label>
+                {skillsLoading ? (
+                  <div className="w-full px-3 py-2 border border-gray-300 rounded-md bg-gray-50 text-gray-500">
+                    Loading skills...
+                  </div>
+                ) : skillsList.length === 0 ? (
+                  <div className="w-full px-3 py-2 border border-red-300 rounded-md bg-red-50 text-red-600 text-sm">
+                    No skills available. Please check your connection or contact support.
+                  </div>
+                ) : (
+                  <MultiSelectDropdown
+                    options={skillsList}
+                    selectedOptions={learnSkills}
+                    setSelectedOptions={setLearnSkills}
+                    placeholder="e.g., Spanish, Public Speaking"
+                  />
+                )}
+                {errors.learnSkills && <p className="text-red-500 text-xs mt-1">{errors.learnSkills}</p>}
+              </div>
+
+              {/* --- Replaced Availability Field with Time Range Selector --- */}
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">Your Availability Time Slots</label>
+                <AvailabilitySelector
+                  availability={availability}
+                  setAvailability={setAvailability}
+                  setError={setAvailabilityError}
+                />
+                {(errors.availability || availabilityError) && <p className="text-red-500 text-xs mt-1">{errors.availability || availabilityError}</p>}
+              </div>
+              {/* --------------------------------------------------------- */}
+
+
             </div>
           </div>
           <div className="pt-8 flex items-center justify-between">
-             <button type="button" onClick={() => navigation.navigateTo(Page.Signup1)} className="text-sm font-medium text-brand-teal hover:text-brand-teal-dark">
-                &larr; Back
-              </button>
-            <button 
-              type="submit" 
+            <button type="button" onClick={() => navigation.navigateTo(Page.Signup1)} className="text-sm font-medium text-brand-teal hover:text-brand-teal-dark">
+              &larr; Back
+            </button>
+            <button
+              type="submit"
               disabled={isLoading || isSubmitting}
               className="group relative flex justify-center py-2 px-8 border border-transparent text-sm font-medium rounded-md text-white bg-brand-teal hover:bg-brand-teal-dark focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-brand-teal disabled:opacity-50 disabled:cursor-not-allowed"
             >

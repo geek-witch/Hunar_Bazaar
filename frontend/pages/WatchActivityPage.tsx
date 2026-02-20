@@ -1,6 +1,8 @@
 "use client"
 
-import React, { useState } from "react"
+import React, { useState, useEffect } from "react"
+import { sessionApi, feedbackApi } from '../utils/api'
+import FeedbackModal from "../components/FeedbackModal"
 
 const SearchIcon: React.FC<{ className?: string }> = ({ className }) => (
   <svg className={className} fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -15,580 +17,399 @@ const StarIcon: React.FC<{ filled?: boolean; className?: string }> = ({ filled, 
 )
 
 interface Feedback {
+  _id: string
   rating: number
   comment: string
-  reportedHours: number
-  submittedAt: string
-}
-
-interface Complaint {
-  message: string
-  submittedAt: string
-  attachment?: string
-}
-
-interface Activity {
-  id: string
-  type: string
-  title: string
-  description: string
-  timestamp: string
-  avatar?: string
-  metadata?: {
-    skill?: string
-    teacherName?: string
-    sessionHours?: number
+  hoursTaught: number
+  createdAt: string
+  session: {
+    _id: string
+    skill_id: string
+    date: string
+    time: string
   }
-  feedback?: Feedback
-  complaint?: Complaint
+  learner?: {
+    name: string
+    profilePic?: string
+  }
+  teacher?: {
+    name: string
+    profilePic?: string
+  }
 }
 
-const WatchActivityPage: React.FC = () => {
-  const [timeFilter, setTimeFilter] = useState<"all" | "today" | "week" | "month">("all")
-  const [searchQuery, setSearchQuery] = useState("")
-  const [showFeedbackModal, setShowFeedbackModal] = useState(false)
-  const [showComplaintModal, setShowComplaintModal] = useState(false)
-  const [selectedActivity, setSelectedActivity] = useState<Activity | null>(null)
-  const [isManualFeedback, setIsManualFeedback] = useState(false)
-  const [feedbackReadOnly, setFeedbackReadOnly] = useState(false)
-  const [feedbackForm, setFeedbackForm] = useState({
-    rating: 0,
-    comment: "",
-    reportedHours: 0,
-    teacherName: "",
-    skill: "",
-  })
-  const [complaintText, setComplaintText] = useState("")
-  const [complaintAttachment, setComplaintAttachment] = useState<string>("")
-  const [activities, setActivities] = useState<Activity[]>([
-    {
-      id: "1",
-      type: "session_completed",
-      title: "Session Completed",
-      description: "Completed a React Development session",
-      timestamp: "2024-11-24T15:30:00",
-      avatar: "/asset/p1.jfif",
-      metadata: { skill: "React Development", teacherName: "Ayesha Rana", sessionHours: 2 },
-    },
-    {
-      id: "2",
-      type: "session_completed",
-      title: "Session Completed",
-      description: "Completed a Python session",
-      timestamp: "2024-11-24T14:00:00",
-      avatar: "/asset/p2.png",
-      metadata: { skill: "Python", teacherName: "Ali Khan", sessionHours: 2.5 },
-    },
-    {
-      id: "6",
-      type: "session_completed",
-      title: "Session Completed",
-      description: "Completed a Spanish Language session",
-      timestamp: "2024-11-22T16:00:00",
-      avatar: "/asset/p3.jpg",
-      metadata: { skill: "Spanish Language", teacherName: "Carlos Rodriguez", sessionHours: 1.5 },
-      feedback: {
-        rating: 5,
-        comment: "Excellent teacher! Very patient and knowledgeable.",
-        reportedHours: 1.5,
-        submittedAt: "2024-11-22T17:00:00"
-      },
-       complaint: {
-        message: "The reported time was incorrect by 15 minutes.",
-        submittedAt: "2024-11-22T17:05:00",
-        attachment: "time_discrepancy_log.png" // Mock existing attachment
-        }
-    },
-  ])
+interface PendingSession {
+  _id: string
+  teacher_id: {
+    name: string
+    profilePic?: string
+  }
+  skill_id: string
+  date: string
+  time: string
+  duration?: string
+}
 
-  // Opens modal for a specific activity (to add or update feedback)
-  const openFeedbackModal = (activity: Activity | null = null) => {
-    if (activity) {
-      // activity-specific feedback
-      setSelectedActivity(activity)
-      // If activity already has feedback, open in read-only (view) mode
-      setFeedbackReadOnly(!!activity.feedback)
-      setIsManualFeedback(false)
-      setFeedbackForm({
-        rating: activity.feedback?.rating || 0,
-        comment: activity.feedback?.comment || "",
-        reportedHours: activity.feedback?.reportedHours ?? activity.metadata?.sessionHours ?? 0,
-        teacherName: activity.metadata?.teacherName || "",
-        skill: activity.metadata?.skill || "",
-      })
-    } else {
-      // manual new feedback (no activity)
-      setSelectedActivity(null)
-      setFeedbackReadOnly(false)
-      setIsManualFeedback(true)
-      setFeedbackForm({
-        rating: 0,
-        comment: "",
-        reportedHours: 0,
-        teacherName: "",
-        skill: "",
-      })
+import type { Navigation } from "../App"
+
+const WatchActivityPage: React.FC<{ navigation: Navigation }> = ({ navigation }) => {
+  const [activeTab, setActiveTab] = useState<"received" | "given" | "pending">("received")
+  const [searchQuery, setSearchQuery] = useState("")
+  const [loading, setLoading] = useState(false)
+
+  const [feedbacks, setFeedbacks] = useState<Feedback[]>([])
+  const [pendingSessions, setPendingSessions] = useState<PendingSession[]>([])
+
+  const [showFeedbackModal, setShowFeedbackModal] = useState(false)
+  const [selectedActivity, setSelectedActivity] = useState<any>(null)
+  const [isEditing, setIsEditing] = useState(false)
+
+  const [pendingCount, setPendingCount] = useState(0)
+  const [receivedCount, setReceivedCount] = useState(0)
+  const [givenCount, setGivenCount] = useState(0)
+
+  // Check URL hash for direct navigation
+  useEffect(() => {
+    const checkHash = () => {
+      const hash = window.location.hash
+      if (hash.includes('defaultTab=pending')) {
+        setActiveTab('pending')
+      }
     }
+    checkHash()
+  }, [])
+
+  useEffect(() => {
+    fetchData()
+    // refresh counts when active tab changes
+    fetchCounts()
+  }, [activeTab])
+
+  // Fetch counts for received/given/pending to show badges on tabs
+  const fetchCounts = async () => {
+    try {
+      const pendingRes = await feedbackApi.getFeedbacks('pending')
+      if (Array.isArray(pendingRes)) setPendingCount(pendingRes.length)
+      else if (pendingRes && pendingRes.success && Array.isArray(pendingRes.data)) setPendingCount(pendingRes.data.length)
+      else setPendingCount(0)
+
+      const receivedRes = await feedbackApi.getFeedbacks('received')
+      if (Array.isArray(receivedRes)) setReceivedCount(receivedRes.length)
+      else if (receivedRes && receivedRes.success && Array.isArray(receivedRes.data)) setReceivedCount(receivedRes.data.length)
+      else setReceivedCount(0)
+
+      const givenRes = await feedbackApi.getFeedbacks('given')
+      if (Array.isArray(givenRes)) setGivenCount(givenRes.length)
+      else if (givenRes && givenRes.success && Array.isArray(givenRes.data)) setGivenCount(givenRes.data.length)
+      else setGivenCount(0)
+    } catch (error) {
+      console.error('Error fetching feedback counts:', error)
+    }
+  }
+
+  // Fetch pending count separately to keep it updated regardless of active tab
+  useEffect(() => {
+    if (activeTab === 'pending') return; // fetchData handles it
+    const fetchPendingCount = async () => {
+      try {
+        const response = await feedbackApi.getFeedbacks('pending')
+        if (Array.isArray(response)) {
+          setPendingCount(response.length)
+        } else if (response && response.success && Array.isArray(response.data)) {
+          setPendingCount(response.data.length)
+        } else {
+          setPendingCount(0)
+        }
+      } catch (error) {
+        console.error("Error fetching pending count:", error)
+      }
+    }
+    fetchPendingCount()
+  }, [activeTab]) // Re-fetch when tab changes (in case we processed items)
+
+  const fetchData = async () => {
+    setLoading(true)
+    try {
+      if (activeTab === 'pending') {
+        const response = await feedbackApi.getFeedbacks('pending')
+        if (Array.isArray(response)) {
+          setPendingSessions(response)
+          setPendingCount(response.length)
+        } else if (response && response.success && Array.isArray(response.data)) {
+          setPendingSessions(response.data)
+          setPendingCount(response.data.length)
+        } else {
+          setPendingSessions([])
+          setPendingCount(0)
+        }
+      } else {
+        const response = await feedbackApi.getFeedbacks(activeTab)
+        if (Array.isArray(response)) {
+          setFeedbacks(response)
+        } else if (response && response.success && Array.isArray(response.data)) {
+          setFeedbacks(response.data)
+        } else {
+          setFeedbacks([])
+        }
+      }
+    } catch (error) {
+      console.error("Error fetching data:", error)
+    } finally {
+      setLoading(false)
+    }
+  }
+
+  const handleFeedbackSubmit = async (data: { rating: number; comment: string; reportedHours: number }) => {
+    if (!selectedActivity) return
+
+    try {
+      let response;
+      if (isEditing) {
+        // Update existing feedback
+        response = await feedbackApi.updateFeedback(selectedActivity._id, {
+          rating: data.rating,
+          comment: data.comment,
+          hoursTaught: data.reportedHours
+        })
+      } else {
+        // Create new feedback
+        response = await feedbackApi.createFeedback({
+          sessionId: selectedActivity._id,
+          rating: data.rating,
+          comment: data.comment,
+          hoursTaught: data.reportedHours
+        })
+      }
+
+      if (response.success) {
+        setShowFeedbackModal(false)
+        setSelectedActivity(null)
+        setIsEditing(false)
+        fetchData() // Refresh list
+        // Refresh counts
+        await fetchCounts()
+        navigation.showNotification(isEditing ? 'Feedback updated successfully' : 'Feedback submitted successfully')
+      } else {
+        navigation.showNotification(response.message || 'Action failed')
+      }
+    } catch (error) {
+      console.error("Error submitting feedback:", error)
+    }
+  }
+
+  const openFeedbackModal = (item: any, mode: 'give' | 'edit' | 'view') => {
+    setSelectedActivity(item)
+    setIsEditing(mode === 'edit')
     setShowFeedbackModal(true)
   }
 
-  // Submit feedback: either update existing activity (set feedback) or create a new activity with feedback
-  const submitFeedback = () => {
-    // sanitize hours: never negative
-    const safeHours = Math.max(0, Number(feedbackForm.reportedHours) || 0)
 
-    if (isManualFeedback) {
-      // create a new activity with provided metadata + feedback
-      const newActivity: Activity = {
-        id: String(Date.now()),
-        type: "session_completed",
-        title: "Session (manual feedback)",
-        description: `Manual feedback for ${feedbackForm.skill || "a session"}`,
-        timestamp: new Date().toISOString(),
-        avatar: undefined,
-        metadata: {
-          skill: feedbackForm.skill || undefined,
-          teacherName: feedbackForm.teacherName || undefined,
-          sessionHours: safeHours,
-        },
-        feedback: {
-          rating: feedbackForm.rating,
-          comment: feedbackForm.comment,
-          reportedHours: safeHours,
-          submittedAt: new Date().toISOString(),
-        },
-      }
-
-      setActivities((prev) => [newActivity, ...prev])
-      // reset modal
-      setShowFeedbackModal(false)
-      setIsManualFeedback(false)
-      setSelectedActivity(null)
-      setFeedbackForm({ rating: 0, comment: "", reportedHours: 0, teacherName: "", skill: "" })
-      return
-    }
-
-    // activity-specific: update the activity's feedback (add or overwrite)
-    if (!selectedActivity) return
-
-      // Prevent updating an existing feedback once submitted — view-only mode
-      if (selectedActivity.feedback) {
-        setShowFeedbackModal(false)
-        setSelectedActivity(null)
-        setIsManualFeedback(false)
-        setFeedbackReadOnly(false)
-        setFeedbackForm({ rating: 0, comment: "", reportedHours: 0, teacherName: "", skill: "" })
-        return
-      }
-
-      const updatedActivities = activities.map((act) => {
-      if (act.id === selectedActivity.id) {
-        return {
-          ...act,
-          feedback: {
-            rating: feedbackForm.rating,
-            comment: feedbackForm.comment,
-            reportedHours: safeHours,
-            submittedAt: new Date().toISOString(),
-          },
-          // optionally update metadata.sessionHours to match reported if you want:
-          metadata: {
-            ...act.metadata,
-            // keep teacherName/skill as-is unless user changed them in form (we keep them as-is)
-            sessionHours: act.metadata?.sessionHours ?? safeHours,
-          }
-        }
-      }
-      return act
-    })
-
-    setActivities(updatedActivities)
-    setShowFeedbackModal(false)
-    setSelectedActivity(null)
-    setFeedbackForm({ rating: 0, comment: "", reportedHours: 0, teacherName: "", skill: "" })
-  }
-
-   const openComplaintModal = (activity: Activity) => {
-    setSelectedActivity(activity)
-    setComplaintText(activity.complaint?.message || "")
-    setComplaintAttachment(activity.complaint?.attachment || "")
-    setShowComplaintModal(true)
-  }
-
-  const submitComplaint = () => {
-    if (!selectedActivity) return
-
-     if (selectedActivity.complaint) {
-      setShowComplaintModal(false)
-      setSelectedActivity(null)
-      setComplaintText("")
-      setComplaintAttachment("")
-      return
-    }
-
-    const updatedActivities = activities.map(act => {
-      if (act.id === selectedActivity.id) {
-        return {
-          ...act,
-          complaint: {
-            message: complaintText,
-            submittedAt: new Date().toISOString(),
-            attachment: complaintAttachment
-          }
-        }
-      }
-      return act
-    })
-
-    setActivities(updatedActivities)
-    setShowComplaintModal(false)
-    setSelectedActivity(null)
-    setComplaintText("")
-    setComplaintAttachment("")
-  }
-
-  const filterByTime = (activity: Activity) => {
-    const activityDate = new Date(activity.timestamp)
-    const now = new Date()
-
-    if (timeFilter === "today") {
-      return activityDate.toDateString() === now.toDateString()
-    } else if (timeFilter === "week") {
-      const weekAgo = new Date(now.getTime() - 7 * 24 * 60 * 60 * 1000)
-      return activityDate >= weekAgo
-    } else if (timeFilter === "month") {
-      const monthAgo = new Date(now.getTime() - 30 * 24 * 60 * 60 * 1000)
-      return activityDate >= monthAgo
-    }
-    return true
-  }
-
-  const filteredActivities = activities.filter((activity) => {
-    const matchesTime = filterByTime(activity)
-    const matchesSearch =
-      activity.title.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      activity.description.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      activity.metadata?.teacherName?.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      activity.metadata?.skill?.toLowerCase().includes(searchQuery.toLowerCase())
-    return matchesTime && matchesSearch
-  })
 
   const getTimeAgo = (timestamp: string) => {
-    const now = new Date()
-    const activityDate = new Date(timestamp)
-
-    const today = new Date()
-    const yesterday = new Date(today)
-    yesterday.setDate(today.getDate() - 1)
-
-    if (activityDate.toDateString() === today.toDateString()) return "Today"
-    if (activityDate.toDateString() === yesterday.toDateString()) return "Yesterday"
-
-    return activityDate.toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" })
+    const date = new Date(timestamp)
+    return date.toLocaleDateString()
   }
 
+  const filteredItems = (activeTab === 'pending' ? pendingSessions : feedbacks).filter(item => {
+    if (!searchQuery) return true
+
+    const query = searchQuery.toLowerCase()
+    if (activeTab === 'pending') {
+      const s = item as PendingSession
+      return s.skill_id.toLowerCase().includes(query) || s.teacher_id.name.toLowerCase().includes(query)
+    } else {
+      const f = item as Feedback
+      return f.comment.toLowerCase().includes(query) ||
+        f.session.skill_id.toLowerCase().includes(query) ||
+        (f.teacher?.name || '').toLowerCase().includes(query) ||
+        (f.learner?.name || '').toLowerCase().includes(query)
+    }
+  })
+
   return (
-    <div className="space-y-6">
-      <div className="flex items-center justify-between">
-        <h1 className="text-3xl font-bold text-white">Activity Log</h1>
-
-        {/* Global Add Feedback button (plus icon area) */}
-        <div className="ml-4">
-          <button
-            onClick={() => openFeedbackModal(null)}
-            className="flex items-center gap-2 bg-brand-teal text-white px-4 py-2 rounded-lg shadow-md"
-            title="Add manual feedback"
-          >
-            <span className="text-lg font-bold">+</span>
-            <span className="text-sm">Add Feedback</span>
-          </button>
-        </div>
-      </div>
-
-      <div className="bg-white p-4 rounded-xl shadow-sm">
-        <div className="relative mb-4">
-          <input
-            type="text"
-            placeholder="Search by teacher name or skill..."
-            value={searchQuery}
-            onChange={(e) => setSearchQuery(e.target.value)}
-            className="w-full bg-gray-50 rounded-lg py-2 pl-10 pr-4 border border-gray-200"
-          />
-          <SearchIcon className="w-5 h-5 text-gray-400 absolute left-3 top-1/2 -translate-y-1/2" />
-        </div>
-      </div>
-
-      {/* Activity List */}
-      {filteredActivities.length === 0 ? (
-        <div className="bg-white p-12 rounded-xl text-center">
-          <h3 className="text-xl font-semibold text-gray-700">No Sessions Found</h3>
-        </div>
-      ) : (
-        <div className="space-y-6">
-          {filteredActivities.map((activity) => (
-            <div key={activity.id} className="bg-white p-4 rounded-xl shadow-sm">
-              <div className="flex gap-4">
-                {activity.avatar && (
-                  <img src={activity.avatar} className="w-12 h-12 rounded-full object-cover" />
-                )}
-
-                <div className="flex-grow">
-                  <div className="flex justify-between mb-1">
-                    <h4 className="font-semibold text-gray-800">{activity.title}</h4>
-                    <span className="text-xs text-gray-500">{getTimeAgo(activity.timestamp)}</span>
-                  </div>
-
-                  <p className="text-sm text-gray-600 mb-2">{activity.description}</p>
-
-                  {/* Teacher Reported Hours */}
-                  <p className="text-xs text-gray-700 mb-3">
-                    ⏱️ Teacher Reported Hours: <strong>{activity.metadata?.sessionHours}h</strong>
-                  </p>
-
-                  {/* Feedback Display */}
-                  {activity.feedback && (
-                    <div className="bg-gray-50 p-3 rounded-lg mb-2">
-                      <div className="flex items-center gap-2 mb-1">
-                        <span className="text-xs font-semibold text-gray-700">Feedback:</span>
-                        <div className="flex gap-1">
-                          {[1, 2, 3, 4, 5].map((star) => (
-                            <StarIcon key={star} filled={star <= activity.feedback!.rating} className="w-4 h-4 text-yellow-500" />
-                          ))}
-                        </div>
-                      </div>
-                      <p className="text-xs text-gray-600 mb-1">{activity.feedback.comment}</p>
-                      <p className="text-xs text-gray-600">
-                        Reported: {activity.feedback.reportedHours}h
-                      </p>
-                    </div>
-                  )}
-
-                   {/* Complaint Display - shows attachment link if present */}
-                  {activity.complaint?.attachment && (
-                    <p className="text-xs text-red-600 mt-1">
-                      Attachment: **{activity.complaint.attachment}**
-                    </p>
-                  )}
-
-                  {/* Feedback Button - view if already submitted */}
-                  <button
-                    onClick={() => openFeedbackModal(activity)}
-                    className="text-sm bg-brand-teal text-white px-4 py-2 rounded-lg mr-2"
-                  >
-                    {activity.feedback ? "View Feedback" : "Give Feedback"}
-                  </button>
-
-                  {/* Complaint Button */}
-                  <button
-                    onClick={() => openComplaintModal(activity)}
-                    className="text-sm bg-red-500 text-white px-4 py-2 rounded-lg"
-                  >
-                    {activity.complaint ? "View Complaint" : "Report Issue"}
-                  </button>
-                </div>
-              </div>
-            </div>
-          ))}
-        </div>
-      )}
-
-      {/* Feedback Modal */}
-      {showFeedbackModal && (
-        <div className="fixed inset-0 bg-black bg-opacity-40 flex items-center justify-center p-4 z-50">
-          <div className="bg-white rounded-xl max-w-md w-full p-6">
-            <h2 className="text-2xl font-bold mb-4">
-              {feedbackReadOnly
-                ? "View Feedback"
-                : isManualFeedback
-                ? "Add Feedback "
-                : selectedActivity
-                ? "Add Feedback"
-                : "Add Feedback"}
-            </h2>
-
-            {/* If activity-specific, show teacher name and session hours */}
-            {!isManualFeedback && selectedActivity && (
-              <>
-                <p className="text-sm mb-1">Teacher: {selectedActivity.metadata?.teacherName || "—"}</p>
-                <p className="text-sm mb-4">Teacher Reported Hours: {selectedActivity.metadata?.sessionHours ?? "—"}h</p>
-              </>
-            )}
-
-            {/* If manual, allow entering teacher name & skill */}
-            {isManualFeedback && (
-              <>
-                <label className="text-sm font-semibold">Teacher / Learner</label>
-                <input
-                  type="text"
-                  value={feedbackForm.teacherName}
-                  onChange={(e) => setFeedbackForm({ ...feedbackForm, teacherName: e.target.value })}
-                  className="w-full border rounded-lg px-3 py-2 mb-3"
-                  placeholder="e.g. Ali Khan"
-                />
-
-                <label className="text-sm font-semibold">Skill</label>
-                <input
-                  type="text"
-                  value={feedbackForm.skill}
-                  onChange={(e) => setFeedbackForm({ ...feedbackForm, skill: e.target.value })}
-                  className="w-full border rounded-lg px-3 py-2 mb-4"
-                  placeholder="e.g. React Development"
-                />
-              </>
-            )}
-
-            <label className="text-sm font-semibold">Rating</label>
-            <div className="flex gap-2 mt-1 mb-4">
-              {[1, 2, 3, 4, 5].map((star) => (
-                <button
-                  key={star}
-                  onClick={() => {
-                    if (feedbackReadOnly) return
-                    setFeedbackForm({ ...feedbackForm, rating: star })
-                  }}
-                  type="button"
-                >
-                  <StarIcon filled={star <= feedbackForm.rating} className="w-8 h-8 text-yellow-500" />
-                </button>
-              ))}
-            </div>
-
-            <label className="text-sm font-semibold">Hours You Learned</label>
-            <input
-              type="number"
-              min={0}
-              value={feedbackForm.reportedHours}
-              onChange={(e) => {
-                if (feedbackReadOnly) return
-                // clamp to >= 0 and handle empty input
-                const v = e.target.value === "" ? 0 : Number(e.target.value)
-                setFeedbackForm({ ...feedbackForm, reportedHours: Math.max(0, isNaN(v) ? 0 : v) })
-              }}
-              disabled={feedbackReadOnly}
-              className="w-full border rounded-lg px-3 py-2 mb-4"
-            />
-
-            <label className="text-sm font-semibold">Comment</label>
-            <textarea
-              value={feedbackForm.comment}
-              onChange={(e) => {
-                if (feedbackReadOnly) return
-                setFeedbackForm({ ...feedbackForm, comment: e.target.value })
-              }}
-              rows={4}
-              className="w-full border rounded-lg px-3 py-2 mb-6"
-              disabled={feedbackReadOnly}
-            />
-
-            <div className="flex gap-3">
-              <button
-                onClick={() => {
-                  setShowFeedbackModal(false)
-                  setSelectedActivity(null)
-                  setIsManualFeedback(false)
-                  setFeedbackReadOnly(false)
-                  setFeedbackForm({ rating: 0, comment: "", reportedHours: 0, teacherName: "", skill: "" })
-                }}
-                className="flex-1 bg-gray-200 py-2 rounded-lg"
-              >
-                Close
-              </button>
-
-              {!feedbackReadOnly && (
-                <button
-                  onClick={submitFeedback}
-                  className="flex-1 bg-brand-teal text-white py-2 rounded-lg"
-                >
-                  Submit
-                </button>
-              )}
-            </div>
+    <div className="max-w-6xl mx-auto space-y-6 pb-8">
+      {/* Premium Header */}
+      <div className="relative rounded-2xl overflow-hidden shadow-xl shadow-cyan-100/50">
+        <div className="absolute inset-0 bg-gradient-to-r from-brand-teal to-cyan-500 text-white"></div>
+        <div className="relative z-10 p-6 sm:p-8 flex flex-col md:flex-row justify-between items-center gap-4">
+          <div>
+            <h1 className="text-2xl sm:text-3xl font-bold text-white tracking-tight">Watch Activity</h1>
+            <p className="text-cyan-50 text-base mt-1.5">Track feedback and history.</p>
           </div>
         </div>
-      )}
+      </div>
 
-      {/* Complaint Modal*/}
-      {showComplaintModal && selectedActivity && (
-        <div className="fixed inset-0 bg-black bg-opacity-40 flex items-center justify-center p-4 z-50">
-          <div className="bg-white rounded-xl max-w-md w-full p-6">
-            <h2 className="text-2xl font-bold mb-4">
-              {selectedActivity.complaint ? "View Complaint" : "Report an Issue"}
-            </h2>
+      {/* Tabs */}
+      <div className="flex p-1 bg-white/20 backdrop-blur-md rounded-xl gap-1 mb-6 overflow-x-auto">
+        <button
+          onClick={() => setActiveTab('received')}
+          className={`flex-1 py-2 px-4 rounded-lg font-bold text-xs tracking-wide transition-all ${activeTab === 'received'
+            ? 'bg-white text-brand-teal shadow-lg shadow-cyan-900/10'
+            : 'bg-white/50 text-slate-600 hover:bg-white'
+            }`}
+        >
+          Received
+          {receivedCount > 0 && (
+            <span className="bg-slate-700 text-white text-[9px] font-bold px-1.5 py-0.5 rounded-full shadow-sm ml-1.5">
+              {receivedCount}
+            </span>
+          )}
+        </button>
+        <button
+          onClick={() => setActiveTab('given')}
+          className={`flex-1 py-2 px-4 rounded-lg font-bold text-xs tracking-wide transition-all ${activeTab === 'given'
+            ? 'bg-white text-brand-teal shadow-lg shadow-cyan-900/10'
+            : 'bg-white/50 text-slate-600 hover:bg-white'
+            }`}
+        >
+          Given
+          {givenCount > 0 && (
+            <span className="bg-slate-700 text-white text-[9px] font-bold px-1.5 py-0.5 rounded-full shadow-sm ml-1.5">
+              {givenCount}
+            </span>
+          )}
+        </button>
+        <button
+          onClick={() => setActiveTab('pending')}
+          className={`flex-1 py-2 px-4 rounded-lg font-bold text-xs tracking-wide transition-all flex items-center justify-center gap-1.5 ${activeTab === 'pending'
+            ? 'bg-white text-brand-teal shadow-lg shadow-cyan-900/10'
+            : 'bg-white/50 text-slate-600 hover:bg-white'
+            }`}
+        >
+          Pending
+          {pendingCount > 0 && (
+            <span className="bg-red-500 text-white text-[9px] font-bold px-1.5 py-0.5 rounded-full shadow-sm">
+              {pendingCount}
+            </span>
+          )}
+        </button>
+      </div>
 
-            <p className="text-sm mb-4 text-gray-700">
-              If you believe the teacher has entered incorrect hours or there was any issue with the session, you may report it here.
-            </p>
+      {/* Search Bar */}
+      <div className="bg-white p-3 rounded-2xl shadow-lg shadow-slate-200/60 border border-slate-100">
+        <div className="relative group">
+          <input
+            type="text"
+            placeholder="Search activity..."
+            value={searchQuery}
+            onChange={(e) => setSearchQuery(e.target.value)}
+            className="w-full bg-slate-50 text-slate-800 rounded-xl py-2 pl-10 pr-3 border border-slate-200 focus:outline-none focus:ring-2 focus:ring-cyan-400 focus:border-transparent transition-all group-hover:bg-white text-sm"
+          />
+          <SearchIcon className="w-4 h-4 text-slate-400 absolute left-3 top-1/2 -translate-y-1/2 transition-colors group-hover:text-cyan-500" />
+        </div>
+      </div>
 
-            {/* Complaint Textarea */}
-            <label className="text-sm font-semibold">Complaint Details</label>
-            <textarea
-              value={complaintText}
-              onChange={(e) => setComplaintText(e.target.value)}
-              rows={5}
-              className="w-full border rounded-lg px-3 py-2 mb-4"
-              placeholder="Describe the issue..."
-              disabled={!!selectedActivity.complaint} // Disable if complaint exists (view-only)
-            />
+      {/* List */}
+      <div className="space-y-6">
+        {loading ? (
+          <div className="text-center py-10 text-slate-500">Loading...</div>
+        ) : filteredItems.length === 0 ? (
+          <div className="text-center py-10 text-slate-500">No records found.</div>
+        ) : (
+          filteredItems.map((item: any) => {
+            const isPending = activeTab === 'pending'
+            const id = isPending ? item._id : item._id
 
-            {/* Attachment Section (NEW) */}
-            <div className="mb-6">
-              <label className="text-sm font-semibold block mb-2">Attach Screenshot / Image (Optional)</label>
+            return (
+              <div key={id} className="group bg-white p-6 sm:p-8 rounded-3xl shadow-xl shadow-slate-200/60 border border-slate-100 hover:shadow-2xl hover:shadow-cyan-100/50 transition-all duration-300 relative overflow-hidden">
+                <div className="flex gap-6 relative z-10">
+                  <div className="flex-shrink-0">
+                    <div className="w-16 h-16 rounded-2xl p-1 bg-white shadow-sm border border-slate-100 overflow-hidden">
+                      <img
+                        src={isPending ? (item.teacher_id?.profilePic || "/asset/p4.jpg") : (activeTab === 'received' ? (item.learner?.profilePic || "/asset/p4.jpg") : (item.teacher?.profilePic || "/asset/p4.jpg"))}
+                        className="w-full h-full rounded-xl object-cover"
+                        onError={(e) => (e.target as HTMLImageElement).src = "/asset/p4.jpg"}
+                      />
+                    </div>
+                  </div>
 
-              {selectedActivity.complaint ? (
-                // View mode: show existing attachment
-                <p className="text-sm text-gray-600">
-                  {selectedActivity.complaint.attachment ? (
-                    <span>Attached File: <strong className="text-red-600">{selectedActivity.complaint.attachment}</strong></span>
-                  ) : (
-                    <span>No file attached.</span>
-                  )}
-                </p>
-              ) : (
-                // Edit/Add mode: show file input
-                <input
-                  type="file"
-                  accept="image/*"
-                  onChange={(e) => {
-                    // Mocking file path storage for demonstration
-                    const file = e.target.files ? e.target.files[0] : null
-                    setComplaintAttachment(file ? file.name : "")
-                  }}
-                  className="w-full text-sm text-gray-500 file:mr-4 file:py-2 file:px-4 file:rounded-lg file:border-0 file:text-sm file:font-semibold file:bg-red-50 file:text-red-700 hover:file:bg-red-100"
-                />
-              )}
-            </div>
-            {/* End Attachment Section */}
+                  <div className="flex-grow min-w-0">
+                    <div className="flex justify-between items-start">
+                      <div>
+                        <h4 className="text-xl font-bold text-slate-800">
+                          {isPending ? `Pending Feedback for ${item.teacher_id?.name}` :
+                            activeTab === 'received' ? `Feedback from ${item.learner?.name}` :
+                              `Feedback to ${item.teacher?.name}`}
+                        </h4>
+                        <p className="text-slate-500 text-sm font-semibold mt-1">
+                          {isPending ? item.skill_id : (item.session?.skill_id || 'Unknown Skill')} • {getTimeAgo(isPending ? item.date : item.createdAt)}
+                        </p>
+                      </div>
+                      {!isPending && (
+                        <div className="flex gap-1">
+                          {[1, 2, 3, 4, 5].map((star) => (
+                            <StarIcon key={star} filled={star <= item.rating} className="w-4 h-4 text-amber-400" />
+                          ))}
+                        </div>
+                      )}
+                    </div>
 
-            <div className="flex gap-3">
-              <button
-                onClick={() => {
-                  setShowComplaintModal(false)
-                  setSelectedActivity(null)
-                  setComplaintText("")
-                  setComplaintAttachment("")
-                }}
-                className="flex-1 bg-gray-200 py-2 rounded-lg"
-              >
-                Close
-              </button>
+                    {!isPending && (
+                      <div className="mt-4 bg-slate-50 p-4 rounded-xl border border-slate-100">
+                        <p className="text-slate-600 italic">"{item.comment}"</p>
+                        <p className="text-xs text-slate-400 font-bold uppercase mt-2">Hours Taught: {item.hoursTaught}h</p>
+                      </div>
+                    )}
 
-              {/* Only show submit button if no complaint exists (allow submission) */}
-              {!selectedActivity.complaint && (
-                <button
-                  onClick={submitComplaint}
-                  className="flex-1 bg-red-500 text-white py-2 rounded-lg"
-                  disabled={!complaintText} // Disable if message is empty
-                >
-                  Submit Complaint
-                </button>
-              )}
-            </div>
-          </div>
-        </div>
-      )}
+                    <div className="flex gap-3 mt-4">
+                      {isPending ? (
+                        <button
+                          onClick={() => openFeedbackModal(item, 'give')}
+                          className="bg-brand-teal text-white px-5 py-2.5 rounded-xl font-bold shadow-teal-200/50 hover:bg-brand-teal-dark transition-all"
+                        >
+                          Give Feedback
+                        </button>
+                      ) : (
+                        // Report Issue Button (only for Teachers receiving feedback)
+                        // Report Issue Button REMOVED
+                        // Add Edit Feedback Button for Given Feedbacks
+                        activeTab === 'given' && (
+                          <button
+                            onClick={() => openFeedbackModal(item, 'edit')}
+                            className="text-brand-teal hover:bg-teal-50 px-5 py-2.5 rounded-xl font-bold border border-teal-100 transition-all flex items-center gap-2"
+                          >
+                            <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" /></svg>
+                            Edit Feedback
+                          </button>
+                        )
+                      )}
+                    </div>
+                  </div>
+                </div>
+              </div>
+            )
+          })
+        )}
+      </div>
 
-    </div>
-  )
+      {/* Feedback Modal */}
+      <FeedbackModal
+        isOpen={showFeedbackModal}
+        onClose={() => { setShowFeedbackModal(false); setIsEditing(false); }}
+        onSubmit={handleFeedbackSubmit}
+        navigation={navigation}
+        isReadOnly={!isEditing && activeTab !== 'pending'}
+        initialData={selectedActivity ? {
+          rating: selectedActivity.rating,
+          comment: selectedActivity.comment,
+          reportedHours: selectedActivity.hoursTaught
+        } : undefined}
+        sessionDetails={
+          activeTab === 'pending' && selectedActivity ? {
+            teacherName: selectedActivity.teacher_id?.name,
+            skill: selectedActivity.skill_id,
+            sessionHours: 0
+          } : selectedActivity ? {
+            teacherName: selectedActivity.teacher?.name || '',
+            skill: selectedActivity.session?.skill_id || ''
+          } : undefined
+        }
+      />
+
+
+
+    </div>
+  )
 }
 
 export default WatchActivityPage

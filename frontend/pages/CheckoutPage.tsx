@@ -1,55 +1,72 @@
 "use client"
 
 import type React from "react"
-import { useState } from "react"
+import { useState, useEffect } from "react"
 import { Page, type Navigation } from "../App"
 import { CheckCircleIcon } from "../components/icons/MiscIcons"
+import { subscriptionApi } from "../utils/api"
 
 type Plan = "Premium" | "Professional"
 
-const CheckoutPage: React.FC<{ navigation: Navigation; plan?: Plan }> = ({ navigation, plan = "Premium" }) => {
+const CheckoutPage: React.FC<{ navigation: Navigation; plan?: Plan }> = ({ navigation }) => {
   const [paymentMethod, setPaymentMethod] = useState<"card" | "paypal">("card")
   const [isProcessing, setIsProcessing] = useState(false)
+  const [selectedPlan, setSelectedPlan] = useState<any>(null)
+  const [isLoading, setIsLoading] = useState(true)
 
-  const planDetails = {
-    Premium: {
-      name: "Premium",
-      price: 1000,
-      description: "For dedicated learners & teachers",
-      features: ["Unlimited skill exchanges", "Advanced profile analytics", "AI support", "Reminders Option"],
-    },
-    Professional: {
-      name: "Professional",
-      price: 2500,
-      description: "For power users & companies",
-      features: [
-        "Everything in Premium",
-        "Access for all Employees",
-        "Access to exclusive workshops",
-        "Customized AI features",
-      ],
-    },
-  }
+  useEffect(() => {
+    const fetchPlanDetails = async () => {
+      try {
+        const planType = sessionStorage.getItem('selectedPlan') || 'Premium'
+        const response = await subscriptionApi.getPlans()
+        if (response.success && Array.isArray(response.data)) {
+          const plan = response.data.find((p: any) => p.type === planType)
+          if (plan) {
+            setSelectedPlan(plan)
+          } else {
+            // Fallback or error
+            setSelectedPlan(response.data.find((p: any) => p.type === 'Premium'))
+          }
+        }
+      } catch (error) {
+        console.error('Error fetching plan details:', error)
+      } finally {
+        setIsLoading(false)
+      }
+    }
 
-  const selectedPlan = planDetails[plan]
+    fetchPlanDetails()
+  }, [])
 
   const handlePayment = async () => {
+    if (!selectedPlan) return
     setIsProcessing(true)
     try {
       // Simulate payment processing
       await new Promise((resolve) => setTimeout(resolve, 2000))
 
       // Save subscription to localStorage
-      localStorage.setItem("userPlan", plan)
+      localStorage.setItem("userPlan", selectedPlan.type)
       localStorage.setItem("subscriptionDate", new Date().toISOString())
 
-      alert(`Successfully upgraded to ${plan} plan!`)
-      navigation.navigateTo(Page.Home)
+      navigation.showNotification(`Successfully Upgraded to ${selectedPlan.name} Plan!`)
+      // Small delay to show notification before navigating
+      setTimeout(() => {
+        navigation.navigateTo(Page.Home)
+      }, 500)
     } catch (error) {
-      alert("Payment failed. Please try again.")
+      navigation.showNotification("Payment Failed. Please Try Again.")
     } finally {
       setIsProcessing(false)
     }
+  }
+
+  if (isLoading) {
+    return <div className="min-h-screen bg-brand-light-blue flex items-center justify-center text-gray-500">Loading plan details...</div>
+  }
+
+  if (!selectedPlan) {
+    return <div className="min-h-screen bg-brand-light-blue flex items-center justify-center text-gray-500">Plan not found.</div>
   }
 
   return (
@@ -57,7 +74,7 @@ const CheckoutPage: React.FC<{ navigation: Navigation; plan?: Plan }> = ({ navig
       <div className="container mx-auto px-4 max-w-4xl">
         {/* Header */}
         <div className="mb-8">
-        
+
           <h1 className="text-4xl font-bold text-brand-teal">Complete Your Purchase</h1>
         </div>
 
@@ -234,9 +251,8 @@ const CheckoutPage: React.FC<{ navigation: Navigation; plan?: Plan }> = ({ navig
               <button
                 onClick={handlePayment}
                 disabled={isProcessing}
-                className={`w-full py-3 rounded-lg font-semibold text-white transition-all ${
-                  isProcessing ? "bg-gray-400 cursor-not-allowed" : "bg-brand-teal hover:bg-brand-teal-dark"
-                }`}
+                className={`w-full py-3 rounded-lg font-semibold text-white transition-all ${isProcessing ? "bg-gray-400 cursor-not-allowed" : "bg-brand-teal hover:bg-brand-teal-dark"
+                  }`}
               >
                 {isProcessing ? "Processing Payment..." : `Pay PKR ${selectedPlan.price}/month`}
               </button>

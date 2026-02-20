@@ -19,28 +19,42 @@ import AboutUsPage from "./pages/AboutUsPage"
 import ContactUsPage from "./pages/ContactUsPage"
 import CheckoutPage from "./pages/CheckoutPage"
 import ViewProfilePage from "./pages/ViewProfilePage"
+import MeetingPage from "./pages/MeetingPage"
+import { ensureFirebaseSignedIn, firebaseLogout } from "./utils/firebaseAuth"
+import { UnreadMessagesProvider } from "./contexts/UnreadMessagesContext"
+import { NotificationProvider } from "./contexts/NotificationContext";
 
 const Notification: React.FC<{ message: string; onClose: () => void }> = ({ message, onClose }) => {
-    useEffect(() => {
-        const timer = setTimeout(() => {
-            onClose();
-        }, 5000); // Auto-close after 5 seconds
-        return () => clearTimeout(timer);
-    }, [onClose]);
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      onClose();
+    }, 5000); // Auto-close after 5 seconds
+    return () => clearTimeout(timer);
+  }, [onClose]);
 
-    return (
-        // Key changes: fixed top-4, left-1/2, translate-x-1/2 for center-top.
-        // Background white, text-gray-800, teal border on the left (border-l-4)
-        <div className="fixed top-4 left-1/2 transform -translate-x-1/2 z-[100] p-4 pr-10 rounded-lg shadow-xl bg-white text-gray-800 flex items-center justify-between min-w-[300px] border-l-4 border-brand-teal">
-            <span className="text-sm font-medium">{message}</span>
-            <button 
-                onClick={onClose} 
-                className="absolute right-2 top-2 p-1 text-gray-400 hover:text-gray-600 transition"
-            >
-                &times;
-            </button>
+  return (
+    <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-[100]">
+      <div className="bg-white rounded-lg shadow-xl p-4 max-w-sm w-full mx-4 border-l-4 border-brand-teal">
+        <div className="text-center">
+          <div className="mb-3">
+            <div className="mx-auto flex items-center justify-center h-10 w-10 rounded-full bg-brand-teal/10">
+              <svg className="h-5 w-5 text-brand-teal" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
+              </svg>
+            </div>
+          </div>
+          <h3 className="text-base font-semibold text-gray-800 mb-1.5">System Message</h3>
+          <p className="text-sm text-gray-600 mb-4">{message}</p>
+          <button
+            onClick={onClose}
+            className="w-full bg-brand-teal text-white py-1.5 px-4 rounded-lg text-sm font-medium hover:bg-brand-teal-dark transition-colors"
+          >
+            OK
+          </button>
         </div>
-    );
+      </div>
+    </div>
+  );
 };
 export enum Page {
   Landing = 0,
@@ -139,19 +153,22 @@ const hashToPage = (hash: string): Page => {
 
 export type Navigation = {
   navigateTo: (page: Page) => void
-  login: () => void
-  logout: () => void
+  setCurrentPage: (page: string, params?: any) => void
+  login: (isSignup?: boolean) => void
+  logout: (suppressNotification?: boolean) => void
+  showNotification: (message: string) => void
 }
 
 const App: React.FC = () => {
   const [currentPage, setCurrentPage] = useState<Page>(() => hashToPage(window.location.hash))
+  const [customPage, setCustomPage] = useState<{ page: string; params?: any } | null>(null)
   const [isAuthenticated, setIsAuthenticated] = useState<boolean>(() => {
     // Check if token exists in localStorage
     return !!localStorage.getItem("token")
   })
 
   // --- NEW STATE FOR NOTIFICATION ---
-   const [notification, setNotification] = useState<{ message: string } | null>(null)
+  const [notification, setNotification] = useState<{ message: string } | null>(null)
 
   const closeNotification = useCallback(() => {
     setNotification(null)
@@ -162,6 +179,7 @@ const App: React.FC = () => {
   useEffect(() => {
     const handleHashChange = () => {
       setCurrentPage(hashToPage(window.location.hash))
+      setCustomPage(null) // Reset custom page state so we don't get stuck
       // Keep auth state in sync with storage in case it changed (back button, other tabs)
       setIsAuthenticated(!!localStorage.getItem("token"))
       window.scrollTo(0, 0)
@@ -193,6 +211,7 @@ const App: React.FC = () => {
       // Replace the current history entry so back button won't return here
       history.replaceState(null, "", newUrl)
       setCurrentPage(page)
+      setCustomPage(null) // Ensure manual navigation also clears it
       window.scrollTo(0, 0)
     } else {
       // Only push to history if the hash is different
@@ -200,30 +219,74 @@ const App: React.FC = () => {
         window.location.hash = newHash
       } else {
         // If hash is the same, the event won't fire, so we need to scroll manually
+        // We also need to manually clear customPage if we are just "refreshing" the current route via click
+        setCustomPage(null)
         window.scrollTo(0, 0)
       }
     }
   }, [])
 
- // --- MODIFIED LOGIN FUNCTION ---
-  const login = useCallback(() => {
+  // If the app detects a navigation to Home while not authenticated,
+  // immediately replace the history entry to Landing. This prevents
+  // rendering Home content to logged-out users when they navigate back.
+  useEffect(() => {
+    if (currentPage === Page.Home && !isAuthenticated) {
+      navigateTo(Page.Landing, true)
+    }
+  }, [currentPage, isAuthenticated, navigateTo])
+
+  // --- MODIFIED LOGIN FUNCTION ---
+  const login = useCallback((isSignup = false) => {
     setIsAuthenticated(true)
-    // After login, replace history entry so back doesn't go back to login
-    navigateTo(Page.Home, true)
-    setNotification({ message: 'Login Successfully' })
-  }, [navigateTo])
+    const newHash = pageToHash(Page.Home)
+    const newUrl = window.location.pathname + window.location.search + newHash
+    // Replace the current history entry (e.g. /login) with Home, then push
+    // another Home entry. This makes the previous entry also point to Home
+    // so pressing the browser Back button will stay on Home.
+    history.replaceState(null, "", newUrl)
+    history.pushState(null, "", newUrl)
+    setCurrentPage(Page.Home)
+    setCustomPage(null)
+    setNotification({ message: isSignup ? 'Signup Successfully' : 'Login Successfully' })
+  }, [setCurrentPage])
   // -------------------------------
 
   // --- MODIFIED LOGOUT FUNCTION ---
-  const logout = useCallback(() => {
+  const logout = useCallback((suppressNotification = false) => {
     localStorage.removeItem("token")
+    localStorage.removeItem("userId")
+    localStorage.removeItem("unreadMessageCount") // Clear stale unread count
+    firebaseLogout()
     setIsAuthenticated(false)
     navigateTo(Page.Landing)
-    setNotification({ message: 'Logout Successfully' })
+    setCustomPage(null)
+    if (!suppressNotification) {
+      setNotification({ message: 'Logout Successfully' })
+    }
   }, [navigateTo])
   // --------------------------------
 
-  const navigation: Navigation = { navigateTo, login, logout }
+  // Keep Firebase auth in sync whenever JWT auth is present (page refresh, deep links, etc.)
+  useEffect(() => {
+    if (!isAuthenticated) return
+      ; (async () => {
+        try {
+          await ensureFirebaseSignedIn()
+        } catch (e) {
+          console.warn('Firebase sign-in failed:', e)
+        }
+      })()
+  }, [isAuthenticated])
+
+  const setCurrentPageCustom = useCallback((page: string, params?: any) => {
+    setCustomPage({ page, params })
+  }, [])
+
+  const showNotification = useCallback((message: string) => {
+    setNotification({ message })
+  }, [])
+
+  const navigation: Navigation = { navigateTo, setCurrentPage: setCurrentPageCustom, login, logout, showNotification }
 
   // Redirect authenticated users away from the Landing page.
   useEffect(() => {
@@ -233,6 +296,20 @@ const App: React.FC = () => {
   }, [isAuthenticated, currentPage, navigateTo])
 
   const renderPage = () => {
+    // Handle custom pages first
+    if (customPage) {
+      switch (customPage.page) {
+        case 'Meeting':
+          return <MeetingPage navigation={navigation} sessionId={customPage.params?.sessionId} />
+        case 'MyAccount':
+          return <MyAccountPage navigation={navigation} initialTab={customPage.params?.tab} />
+        default:
+          // Reset to default page if unknown custom page
+          setCustomPage(null)
+          break
+      }
+    }
+
     // If user is authenticated, never render the Landing page UI — show Home instead.
     if (isAuthenticated && currentPage === Page.Landing) {
       return <HomePage navigation={navigation} />
@@ -273,24 +350,28 @@ const App: React.FC = () => {
     }
   }
 
-  const showHeaderFooter = currentPage !== Page.MyAccount
+  const showHeaderFooter = currentPage !== Page.MyAccount && !customPage
 
- return (
-    <div className="bg-white min-h-screen flex flex-col font-sans">
-      {/* --- NOTIFICATION DISPLAY --- */}
-      {notification && (
-        <Notification 
-          message={notification.message} 
-          onClose={closeNotification} 
-        />
-      )}
-      {/* ---------------------------- */}
-      {showHeaderFooter && (
-        <Header isAuthenticated={isAuthenticated} navigation={navigation} currentPage={currentPage} />
-      )}
-      <main className="flex-grow">{renderPage()}</main>
-      {showHeaderFooter && <Footer navigation={navigation} />}
-    </div>
+  return (
+    <NotificationProvider>
+      <UnreadMessagesProvider>
+        <div className="bg-white min-h-screen flex flex-col font-sans">
+          {/* --- NOTIFICATION DISPLAY --- */}
+          {notification && (
+            <Notification
+              message={notification.message}
+              onClose={closeNotification}
+            />
+          )}
+          {/* ---------------------------- */}
+          {showHeaderFooter && (
+            <Header isAuthenticated={isAuthenticated} navigation={navigation} currentPage={currentPage} />
+          )}
+          <main className="flex-grow">{renderPage()}</main>
+          {showHeaderFooter && <Footer navigation={navigation} />}
+        </div>
+      </UnreadMessagesProvider>
+    </NotificationProvider>
   )
 }
 

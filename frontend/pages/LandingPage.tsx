@@ -28,18 +28,18 @@ const LandingPage: React.FC<{ navigation: Navigation }> = ({ navigation }) => {
                         </div>
                     </div>
                 </div>
-               
+
             </section>
 
             {/* Wave Section - moved: place it here (after Hero, before Our Success) */}
             <div className="relative w-full overflow-hidden bg-gradient-to-b from-brand-teal to-brand-light-blue py-12 md:py-16">
                 {/* Animated gradient background */}
                 <div className="absolute inset-0 bg-gradient-to-r from-brand-teal via-brand-teal-dark to-brand-teal opacity-10 animate-pulse"></div>
-                
+
                 {/* Floating shapes animation */}
                 <div className="absolute top-0 left-0 w-64 h-64 bg-white opacity-5 rounded-full blur-3xl animate-blob"></div>
                 <div className="absolute top-0 right-0 w-64 h-64 bg-white opacity-5 rounded-full blur-3xl animate-blob animation-delay-2000"></div>
-                
+
                 {/* SVG Wave Animation */}
                 <svg
                     className="absolute bottom-0 left-0 w-full h-auto"
@@ -77,18 +77,18 @@ const LandingPage: React.FC<{ navigation: Navigation }> = ({ navigation }) => {
                         Your Journey Starts Here
                     </h2>
                     <p className="mt-4 text-white/90 text-sm sm:text-base md:text-lg animate-fadeInUp animation-delay-300">
-                     Share your skills, gain new ones, and be part of a thriving community.
+                        Share your skills, gain new ones, and be part of a thriving community.
                     </p>
                 </div>
             </div>
 
             {/* Stats Section */}
             <section className="py-16 sm:py-20 bg-brand-light-blue relative overflow-hidden">
-                 <StarIcon className="absolute top-12 left-1/4 w-5 h-5 text-brand-accent-yellow opacity-40 animate-pulse" />
-                 <CircleIcon className="absolute bottom-16 right-1/4 w-8 h-8 text-brand-accent-peach opacity-40 animate-pulse delay-500" />
-                 <CircleIcon className="absolute top-24 right-1/3 w-4 h-4 text-brand-accent-sky opacity-30 animate-pulse delay-200" />
-                 <StarIcon className="absolute bottom-10 left-1/3 w-8 h-8 text-brand-accent-green opacity-30 animate-pulse delay-800" />
-                 <CircleIcon className="absolute top-1/2 left-10 w-6 h-6 text-brand-accent-coral opacity-40 animate-pulse delay-1200" />
+                <StarIcon className="absolute top-12 left-1/4 w-5 h-5 text-brand-accent-yellow opacity-40 animate-pulse" />
+                <CircleIcon className="absolute bottom-16 right-1/4 w-8 h-8 text-brand-accent-peach opacity-40 animate-pulse delay-500" />
+                <CircleIcon className="absolute top-24 right-1/3 w-4 h-4 text-brand-accent-sky opacity-30 animate-pulse delay-200" />
+                <StarIcon className="absolute bottom-10 left-1/3 w-8 h-8 text-brand-accent-green opacity-30 animate-pulse delay-800" />
+                <CircleIcon className="absolute top-1/2 left-10 w-6 h-6 text-brand-accent-coral opacity-40 animate-pulse delay-1200" />
                 <div className="container mx-auto px-4 sm:px-6 lg:px-8 text-center relative z-10">
                     <h2 className="text-3xl font-bold text-brand-teal mb-2">Our Success</h2>
                     <div className="w-24 h-1 bg-brand-teal mx-auto mb-12"></div>
@@ -105,7 +105,7 @@ const LandingPage: React.FC<{ navigation: Navigation }> = ({ navigation }) => {
                             <h3 className="text-3xl sm:text-4xl font-bold text-brand-teal">26</h3>
                             <p className="text-gray-500 mt-2">Participants</p>
                         </div>
-                         <div>
+                        <div>
                             <h3 className="text-3xl sm:text-4xl font-bold text-brand-teal">16</h3>
                             <p className="text-gray-500 mt-2">Years of experience</p>
                         </div>
@@ -120,14 +120,14 @@ const LandingPage: React.FC<{ navigation: Navigation }> = ({ navigation }) => {
                     <p className="text-gray-200 mt-4 max-w-3xl mx-auto">Hunar Bazaar is an online learning platform that allows you to exchange your skills with others. Teach what you know, and learn what you don't. All for free.</p>
                     <div className="grid md:grid-cols-2 gap-8 mt-12">
                         <div className="bg-white p-6 sm:p-8 rounded-lg text-left transform hover:-translate-y-2 transition-transform flex flex-col h-full">
-                            <img src="/asset/teacher.gif" alt="For Instructors" className="rounded-md mb-6 w-full h-52 object-cover"/>
+                            <img src="/asset/teacher.gif" alt="For Instructors" className="rounded-md mb-6 w-full h-52 object-cover" />
                             <div className="flex-grow">
                                 <h3 className="text-sm font-bold uppercase text-brand-teal mb-2">For Instructors</h3>
                                 <p className="text-gray-700 mt-2">Showcase your skills, connect with learners, and earn credits to learn new things for yourself.</p>
                             </div>
                         </div>
                         <div className="bg-white p-6 sm:p-8 rounded-lg text-left transform hover:-translate-y-2 transition-transform flex flex-col h-full">
-                            <img src="/asset/student.gif" alt="For Students" className="rounded-md mb-6 w-full h-52 object-cover"/>
+                            <img src="/asset/student.gif" alt="For Students" className="rounded-md mb-6 w-full h-52 object-cover" />
                             <div className="flex-grow">
                                 <h3 className="text-sm font-bold uppercase text-brand-teal mb-2">For Students</h3>
                                 <p className="text-gray-700 mt-2">Find experienced instructors for any skill you want to learn. Use your own skills to earn learning credits.</p>
@@ -136,7 +136,7 @@ const LandingPage: React.FC<{ navigation: Navigation }> = ({ navigation }) => {
                     </div>
                 </div>
             </section>
-            
+
             {/* How It Works Section */}
             <section className="py-16 sm:py-20 bg-brand-light-blue relative overflow-hidden">
                 <CircleIcon className="absolute top-20 left-10 w-10 h-10 text-brand-accent-sky opacity-30 animate-pulse delay-300" />
@@ -156,7 +156,7 @@ const LandingPage: React.FC<{ navigation: Navigation }> = ({ navigation }) => {
                         </div>
                         <div className="text-center">
                             <div className="bg-brand-teal text-white w-16 h-16 rounded-full flex items-center justify-center mx-auto mb-4">
-                               <span className="text-2xl font-bold">2</span>
+                                <span className="text-2xl font-bold">2</span>
                             </div>
                             <h3 className="text-xl font-semibold text-brand-teal mb-2">Find a Match</h3>
                             <p className="text-gray-600">Browse our community to find people who have the skills you want.</p>
@@ -171,17 +171,17 @@ const LandingPage: React.FC<{ navigation: Navigation }> = ({ navigation }) => {
                     </div>
                 </div>
             </section>
-            
+
             {/* Testimonials Section */}
             <section className="py-16 sm:py-20 bg-white">
                 <div className="container mx-auto px-4 sm:px-6 lg:px-8 text-center">
                     <h2 className="text-3xl font-bold text-brand-teal">What Our Users Say</h2>
-                     <div className="w-24 h-1 bg-brand-teal mx-auto mt-2 mb-12"></div>
+                    <div className="w-24 h-1 bg-brand-teal mx-auto mt-2 mb-12"></div>
                     <div className="grid md:grid-cols-2 gap-8 text-left">
                         <div className="bg-brand-light-blue p-6 sm:p-8 rounded-lg">
                             <p className="text-gray-600 italic mb-4">"Hunar Bazaar is amazing! I learned how to code in Python by teaching someone how to Design UI/Ux. It's a fantastic concept."</p>
                             <div className="flex flex-wrap items-center">
-                                <img src="/asset/user1.jpg" alt="User" className="w-12 h-12 rounded-full mr-4"/>
+                                <img src="/asset/user1.jpg" alt="User" className="w-12 h-12 rounded-full mr-4" />
                                 <div>
 
                                     <h4 className="font-semibold text-brand-teal">Ali Khan</h4>
@@ -192,10 +192,10 @@ const LandingPage: React.FC<{ navigation: Navigation }> = ({ navigation }) => {
                         <div className="bg-brand-light-blue p-6 sm:p-8 rounded-lg">
                             <p className="text-gray-600 italic mb-4">"As a graphic designer, I was able to share my skills and in return, I'm learning Js for my new website. Highly recommend this platform!"</p>
                             <div className="flex flex-wrap items-center">
-                                <img src="/asset/user2.png" alt="User" className="w-12 h-12 rounded-full mr-4"/>
+                                <img src="/asset/user2.png" alt="User" className="w-12 h-12 rounded-full mr-4" />
                                 <div>
 
-                                    <h4 className="font-semibold text-brand-teal">Ayesha Rana</h4>                           
+                                    <h4 className="font-semibold text-brand-teal">Ayesha Rana</h4>
                                     <p className="text-sm text-gray-500">Designer</p>
                                 </div>
                             </div>

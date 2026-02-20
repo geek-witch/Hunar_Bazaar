@@ -44,12 +44,28 @@ const VerificationPage: React.FC<{ navigation: Navigation }> = ({ navigation }) 
       return;
     }
 
+    // Check if we have complete signup data (new signup) or just email (existing user verification)
+    const completeSignupDataStr = localStorage.getItem('completeSignupData');
+    let signupData = null;
+    
+    if (completeSignupDataStr) {
+      try {
+        signupData = JSON.parse(completeSignupDataStr);
+      } catch (parseError) {
+        console.error('Error parsing signup data:', parseError);
+        setError('Session expired. Please start over.');
+        navigation.navigateTo(Page.Signup1);
+        return;
+      }
+    }
+
     setError('');
     setIsLoading(true);
     try {
       const response = await authApi.verifyOTP({
         email,
         code: enteredPin,
+        signupData: signupData, // Include signup data if this is a new signup
       });
 
       if (response.success && response.data) {
@@ -60,7 +76,8 @@ const VerificationPage: React.FC<{ navigation: Navigation }> = ({ navigation }) 
           localStorage.removeItem('signupUserId');
           localStorage.removeItem('signupEmail');
           localStorage.removeItem('signupData');
-          navigation.login();
+          localStorage.removeItem('completeSignupData');
+          navigation.login(true); // Pass true to indicate this is a signup, not a login
         } else {
           setError('Token not received. Please try again.');
         }
@@ -87,8 +104,7 @@ const VerificationPage: React.FC<{ navigation: Navigation }> = ({ navigation }) 
       const response = await authApi.resendOTP({ email });
       if (response.success) {
         setError('');
-        // Show success message (you could add a success state for this)
-        alert('OTP resent successfully. Please check your email.');
+        navigation.showNotification('OTP Resent Successfully');
       } else {
         setError(response.message || 'Failed to resend OTP. Please try again.');
       }
