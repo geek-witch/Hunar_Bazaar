@@ -6,6 +6,7 @@ interface ApiResponse<T = any> {
   message?: string;
   data?: T;
   error?: string;
+  errors?: { [key: string]: string };
 }
 
 export interface BrowseSkillResult {
@@ -25,7 +26,7 @@ async function apiRequest<T>(
   options: RequestInit = {}
 ): Promise<ApiResponse<T>> {
   const token = localStorage.getItem('token');
-  
+
   const headers: HeadersInit = {
     'Content-Type': 'application/json',
     ...options.headers,
@@ -137,7 +138,14 @@ export const authApi = {
     });
   },
 
-  verifyOTP: async (data: { email: string; code: string }) => {
+  sendSignupOTP: async (data: { email: string }) => {
+    return apiRequest('/send-signup-otp', {
+      method: 'POST',
+      body: JSON.stringify(data),
+    });
+  },
+
+  verifyOTP: async (data: { email: string; code: string; signupData?: any }) => {
     return apiRequest('/verify-otp', {
       method: 'POST',
       body: JSON.stringify(data),
@@ -156,6 +164,10 @@ export const authApi = {
       method: 'POST',
       body: JSON.stringify(data),
     });
+  },
+
+  getFirebaseToken: async () => {
+    return apiRequest<{ token: string }>('/firebase-token', { method: 'GET' });
   },
 
   forgotPassword: async (data: { email: string }) => {
@@ -283,6 +295,175 @@ export const authApi = {
   },
 
   getPublicProfile: async (profileId: string) => {
+    // Try skills/profile by profileId first, fallback to profile by user id.
+    try {
+      const token = localStorage.getItem('token');
+      const headers: HeadersInit = { 'Content-Type': 'application/json' };
+      if (token) headers.Authorization = `Bearer ${token}`;
+
+      // First try as profileId under skills
+      let resp = await fetch(`${API_ROOT_URL}/skills/${profileId}`, { method: 'GET', headers });
+      if (resp.ok) {
+        const data = await resp.json();
+        return { success: true, ...data };
+      }
+
+      // Fallback: treat id as userId and fetch profile by user via auth API
+      const fallback = await apiRequest(`/by-user/${profileId}`, { method: 'GET' });
+      if (fallback.success) {
+        return { success: true, ...fallback };
+      }
+      return { success: false, message: fallback.message || 'Failed to fetch profile', error: fallback.error };
+    } catch (error: any) {
+      return { success: false, message: error.message || 'Network error occurred', error: error.toString() };
+    }
+  },
+  // Friend APIs
+  sendFriendRequest: async (userId: string) => {
+    return apiRequest(`/friend-request/${userId}`, {
+      method: 'POST'
+    });
+  },
+
+  respondFriendRequest: async (userId: string, action: 'accept' | 'reject') => {
+    return apiRequest(`/friend-respond/${userId}`, {
+      method: 'POST',
+      body: JSON.stringify({ action })
+    });
+  },
+
+  getFriendRequests: async () => {
+    return apiRequest('/friend-requests', { method: 'GET' });
+  },
+
+  getFriends: async () => {
+    return apiRequest('/friends', { method: 'GET' });
+  },
+  removeFriend: async (userId: string) => {
+    return apiRequest(`/friend/${userId}`, { method: 'DELETE' });
+  },
+  blockUser: async (userId: string) => {
+    return apiRequest(`/block/${userId}`, { method: 'POST' });
+  },
+  unblockUser: async (userId: string) => {
+    return apiRequest(`/unblock/${userId}`, { method: 'POST' });
+  },
+  checkBlocked: async (userId: string) => {
+    return apiRequest<{ isBlocked: boolean }>(`/check-blocked/${userId}`, { method: 'GET' });
+  },
+  getBlockedByMe: async () => {
+    return apiRequest<Array<{ id: string; name: string; profilePic?: string }>>('/blocked-by-me', { method: 'GET' });
+  },
+};
+
+export const groupApi = {
+  createGroup: async (data: { name?: string; image?: string | null; memberIds: string[] }) => {
+    const token = localStorage.getItem('token');
+    const headers: HeadersInit = { 'Content-Type': 'application/json' };
+    if (token) headers.Authorization = `Bearer ${token}`;
+    const resp = await fetch(`${API_ROOT_URL}/groups`, { method: 'POST', headers, body: JSON.stringify(data) });
+    return resp.json();
+  },
+  addMember: async (groupId: string, userId: string) => {
+    const token = localStorage.getItem('token');
+    const headers: HeadersInit = { 'Content-Type': 'application/json' };
+    if (token) headers.Authorization = `Bearer ${token}`;
+    const resp = await fetch(`${API_ROOT_URL}/groups/${groupId}/add`, { method: 'POST', headers, body: JSON.stringify({ memberId: userId }) });
+    return resp.json();
+  },
+  removeMember: async (groupId: string, userId: string) => {
+    const token = localStorage.getItem('token');
+    const headers: HeadersInit = { 'Content-Type': 'application/json' };
+    if (token) headers.Authorization = `Bearer ${token}`;
+    const resp = await fetch(`${API_ROOT_URL}/groups/${groupId}/remove`, { method: 'POST', headers, body: JSON.stringify({ memberId: userId }) });
+    return resp.json();
+  },
+  renameGroup: async (groupId: string, data: { name?: string; image?: string | null }) => {
+    const token = localStorage.getItem('token');
+    const headers: HeadersInit = { 'Content-Type': 'application/json' };
+    if (token) headers.Authorization = `Bearer ${token}`;
+    const resp = await fetch(`${API_ROOT_URL}/groups/${groupId}/rename`, { method: 'POST', headers, body: JSON.stringify(data) });
+    return resp.json();
+  },
+  assignAdmin: async (groupId: string, userId: string, makeAdmin: boolean) => {
+    const token = localStorage.getItem('token');
+    const headers: HeadersInit = { 'Content-Type': 'application/json' };
+    if (token) headers.Authorization = `Bearer ${token}`;
+    const resp = await fetch(`${API_ROOT_URL}/groups/${groupId}/admin`, { method: 'POST', headers, body: JSON.stringify({ memberId: userId, isAdmin: makeAdmin }) });
+    return resp.json();
+  },
+  deleteMessage: async (groupId: string, messageId: string) => {
+    const token = localStorage.getItem('token');
+    const headers: HeadersInit = { 'Content-Type': 'application/json' };
+    if (token) headers.Authorization = `Bearer ${token}`;
+    const resp = await fetch(`${API_ROOT_URL}/groups/${groupId}/delete-message`, { method: 'POST', headers, body: JSON.stringify({ messageId }) });
+    return resp.json();
+  },
+  leaveGroup: async (groupId: string) => {
+    const token = localStorage.getItem('token');
+    const headers: HeadersInit = { 'Content-Type': 'application/json' };
+    if (token) headers.Authorization = `Bearer ${token}`;
+    const resp = await fetch(`${API_ROOT_URL}/groups/${groupId}/leave`, { method: 'POST', headers });
+    return resp.json();
+  },
+  getGroupDetails: async (groupId: string) => {
+    const token = localStorage.getItem('token');
+    const headers: HeadersInit = { 'Content-Type': 'application/json' };
+    if (token) headers.Authorization = `Bearer ${token}`;
+    const resp = await fetch(`${API_ROOT_URL}/groups/${groupId}`, { method: 'GET', headers });
+    return resp.json();
+  },
+  deleteGroup: async (groupId: string) => {
+    const token = localStorage.getItem('token');
+    const headers: HeadersInit = { 'Content-Type': 'application/json' };
+    if (token) headers.Authorization = `Bearer ${token}`;
+    const resp = await fetch(`${API_ROOT_URL}/groups/${groupId}`, { method: 'DELETE', headers });
+    return resp.json();
+  }
+};
+
+export const profileApi = {
+  getProfileById: async (id: string) => {
+    // Try to fetch by profile id via skills route first (backwards-compatible),
+    // otherwise fetch by user id via profile by-user endpoint.
+    try {
+      const token = localStorage.getItem('token');
+      const headers: HeadersInit = { 'Content-Type': 'application/json' };
+      if (token) headers.Authorization = `Bearer ${token}`;
+
+      // First try as profileId under skills
+      let resp = await fetch(`${API_ROOT_URL}/skills/${id}`, { method: 'GET', headers });
+      if (resp.ok) return await resp.json();
+
+      // Fallback: treat id as userId and fetch profile by user
+      resp = await fetch(`${API_ROOT_URL}/profile/by-user/${id}`, { method: 'GET', headers });
+      return await resp.json();
+    } catch (err) {
+      return { success: false, message: 'Network error', error: String(err) };
+    }
+  },
+
+  getProgress: async () => {
+    return apiRequest('/profile/progress', {
+      method: 'GET'
+    });
+  },
+
+  masterSkill: async (sessionId: string) => {
+    return apiRequest('/master-skill', {
+      method: 'POST',
+      body: JSON.stringify({ sessionId })
+    });
+  }
+};
+export const sessionApi = {
+  createSession: async (data: {
+    learner_id?: string;
+    learner_ids?: string[];
+    skill_id: string;
+    date: string;
+    time: string;
+  }) => {
     try {
       const token = localStorage.getItem('token');
       const headers: HeadersInit = {
@@ -292,15 +473,346 @@ export const authApi = {
         headers.Authorization = `Bearer ${token}`;
       }
 
-      const response = await fetch(`${API_ROOT_URL}/skills/${profileId}`, {
+      const response = await fetch(`${API_ROOT_URL}/sessions`, {
+        method: 'POST',
+        headers,
+        body: JSON.stringify(data),
+      });
+      const result = await response.json();
+      if (!response.ok) {
+        return {
+          success: false,
+          message: result.message || 'Failed to create session',
+          error: result.error,
+        };
+      }
+      return {
+        success: true,
+        ...result,
+      };
+    } catch (error: any) {
+      return {
+        success: false,
+        message: error.message || 'Network error occurred',
+        error: error.toString(),
+      };
+    }
+  },
+
+  getSessions: async (filter?: 'all' | 'teaching' | 'learning', search?: string, status?: 'upcoming' | 'past') => {
+    try {
+      const token = localStorage.getItem('token');
+      const headers: HeadersInit = {
+        'Content-Type': 'application/json',
+      };
+      if (token) {
+        headers.Authorization = `Bearer ${token}`;
+      }
+
+      const params = new URLSearchParams();
+      if (filter) params.append('filter', filter);
+      if (search) params.append('search', search);
+      if (status) params.append('status', status);
+      const query = params.toString() ? `?${params.toString()}` : '';
+
+      const response = await fetch(`${API_ROOT_URL}/sessions${query}`, {
         method: 'GET',
         headers,
+      });
+      const result = await response.json();
+      if (!response.ok) {
+        return {
+          success: false,
+          message: result.message || 'Failed to fetch sessions',
+          error: result.error,
+        };
+      }
+      return {
+        success: true,
+        ...result,
+      };
+    } catch (error: any) {
+      return {
+        success: false,
+        message: error.message || 'Network error occurred',
+        error: error.toString(),
+      };
+    }
+  },
+
+  cancelSession: async (sessionId: string) => {
+    try {
+      const token = localStorage.getItem('token');
+      const headers: HeadersInit = {
+        'Content-Type': 'application/json',
+      };
+      if (token) {
+        headers.Authorization = `Bearer ${token}`;
+      }
+
+      const response = await fetch(`${API_ROOT_URL}/sessions/${sessionId}/cancel`, {
+        method: 'PATCH',
+        headers,
+      });
+      const result = await response.json();
+      if (!response.ok) {
+        return {
+          success: false,
+          message: result.message || 'Failed to cancel session',
+          error: result.error,
+        };
+      }
+      return {
+        success: true,
+        ...result,
+      };
+    } catch (error: any) {
+      return {
+        success: false,
+        message: error.message || 'Network error occurred',
+        error: error.toString(),
+      };
+    }
+  },
+
+  joinSession: async (sessionId: string) => {
+    try {
+      const token = localStorage.getItem('token');
+      const headers: HeadersInit = {
+        'Content-Type': 'application/json',
+      };
+      if (token) {
+        headers.Authorization = `Bearer ${token}`;
+      }
+
+      const response = await fetch(`${API_ROOT_URL}/sessions/${sessionId}/join`, {
+        method: 'POST',
+        headers,
+      });
+      const result = await response.json();
+      if (!response.ok) {
+        return {
+          success: false,
+          message: result.message || 'Failed to join session',
+          error: result.error,
+        };
+      }
+      return {
+        success: true,
+        ...result,
+      };
+    } catch (error: any) {
+      return {
+        success: false,
+        message: error.message || 'Network error occurred',
+        error: error.toString(),
+      };
+    }
+  },
+
+  getMeetingDetails: async (sessionId: string) => {
+    try {
+      const token = localStorage.getItem('token');
+      const headers: HeadersInit = {
+        'Content-Type': 'application/json',
+      };
+      if (token) {
+        headers.Authorization = `Bearer ${token}`;
+      }
+
+      const response = await fetch(`${API_ROOT_URL}/sessions/${sessionId}/meeting`, {
+        method: 'GET',
+        headers,
+      });
+      const result = await response.json();
+      if (!response.ok) {
+        return {
+          success: false,
+          message: result.message || 'Failed to get meeting details',
+          error: result.error,
+        };
+      }
+      return {
+        success: true,
+        ...result,
+      };
+    } catch (error: any) {
+      return {
+        success: false,
+        message: error.message || 'Network error occurred',
+        error: error.toString(),
+      };
+    }
+  },
+
+  deleteSession: async (sessionId: string) => {
+    try {
+      const token = localStorage.getItem('token');
+      const headers: HeadersInit = {
+        'Content-Type': 'application/json',
+      };
+      if (token) {
+        headers.Authorization = `Bearer ${token}`;
+      }
+
+      const response = await fetch(`${API_ROOT_URL}/sessions/${sessionId}`, {
+        method: 'DELETE',
+        headers,
+      });
+      const result = await response.json();
+      if (!response.ok) {
+        return {
+          success: false,
+          message: result.message || 'Failed to delete session',
+          error: result.error,
+        };
+      }
+      return {
+        success: true,
+        ...result,
+      };
+    } catch (error: any) {
+      return {
+        success: false,
+        message: error.message || 'Network error occurred',
+        error: error.toString(),
+      };
+    }
+  },
+
+  completeSession: async (sessionId: string) => {
+    try {
+      const token = localStorage.getItem('token');
+      const headers: HeadersInit = {
+        'Content-Type': 'application/json',
+      };
+      if (token) {
+        headers.Authorization = `Bearer ${token}`;
+      }
+
+      const response = await fetch(`${API_ROOT_URL}/sessions/${sessionId}/complete`, {
+        method: 'PATCH',
+        headers,
+      });
+      const result = await response.json();
+      if (!response.ok) {
+        return {
+          success: false,
+          message: result.message || 'Failed to complete session',
+          error: result.error,
+        };
+      }
+      return {
+        success: true,
+        ...result,
+      };
+    } catch (error: any) {
+      return {
+        success: false,
+        message: error.message || 'Network error occurred',
+        error: error.toString(),
+      };
+    }
+  },
+};
+
+export const feedbackApi = {
+  createFeedback: async (data: {
+    sessionId: string;
+    rating: number;
+    comment: string;
+    hoursTaught: number;
+  }) => {
+    try {
+      const token = localStorage.getItem('token');
+      const headers: HeadersInit = { 'Content-Type': 'application/json' };
+      if (token) headers.Authorization = `Bearer ${token}`;
+
+      const response = await fetch(`${API_ROOT_URL}/feedback`, {
+        method: 'POST',
+        headers,
+        body: JSON.stringify(data),
+      });
+      return await response.json();
+    } catch (error: any) {
+      return { success: false, message: error.message };
+    }
+  },
+
+  updateFeedback: async (feedbackId: string, data: {
+    rating?: number;
+    comment?: string;
+    hoursTaught?: number;
+  }) => {
+    try {
+      const token = localStorage.getItem('token');
+      const headers: HeadersInit = { 'Content-Type': 'application/json' };
+      if (token) headers.Authorization = `Bearer ${token}`;
+
+      const response = await fetch(`${API_ROOT_URL}/feedback/${feedbackId}`, {
+        method: 'PUT',
+        headers,
+        body: JSON.stringify(data),
+      });
+      return await response.json();
+    } catch (error: any) {
+      return { success: false, message: error.message };
+    }
+  },
+
+  getFeedbacks: async (type: 'received' | 'given' | 'pending') => {
+    try {
+      const token = localStorage.getItem('token');
+      const headers: HeadersInit = { 'Content-Type': 'application/json' };
+      if (token) headers.Authorization = `Bearer ${token}`;
+
+      const response = await fetch(`${API_ROOT_URL}/feedback?type=${type}`, {
+        method: 'GET',
+        headers,
+        body: null
+      });
+      return await response.json();
+    } catch (error: any) {
+      return { success: false, message: error.message };
+    }
+  },
+
+  reportFeedback: async (data: {
+    feedbackId: string;
+    reason: string;
+    description: string;
+  }) => {
+    try {
+      const token = localStorage.getItem('token');
+      const headers: HeadersInit = { 'Content-Type': 'application/json' };
+      if (token) headers.Authorization = `Bearer ${token}`;
+
+      const response = await fetch(`${API_ROOT_URL}/feedback/report`, {
+        method: 'POST',
+        headers,
+        body: JSON.stringify(data),
+      });
+      return await response.json();
+    } catch (error: any) {
+      return { success: false, message: error.message };
+    }
+  }
+};
+
+export const subscriptionApi = {
+  getPlans: async () => {
+    try {
+      const response = await fetch(`${API_ROOT_URL}/subscriptions`, {
+        method: 'GET',
+        headers: {
+          'Content-Type': 'application/json',
+        },
       });
       const data = await response.json();
       if (!response.ok) {
         return {
           success: false,
-          message: data.message || 'Failed to fetch profile',
+          message: data.message || 'Failed to fetch plans',
           error: data.error,
         };
       }
@@ -315,7 +827,7 @@ export const authApi = {
         error: error.toString(),
       };
     }
-  },
+  }
 };
 
 export const supportApi = {
@@ -502,5 +1014,145 @@ export const supportApi = {
       };
     }
   },
+  reportUser: async (userId: string, reason: string) => {
+    try {
+      const token = localStorage.getItem('token');
+      const headers: HeadersInit = {
+        'Content-Type': 'application/json',
+      };
+      if (token) {
+        headers.Authorization = `Bearer ${token}`;
+      }
+
+      const response = await fetch(`${API_ROOT_URL}/support/report-user/${userId}`, {
+        method: 'POST',
+        headers,
+        body: JSON.stringify({ reason }),
+      });
+      const result = await response.json();
+      if (!response.ok) {
+        return {
+          success: false,
+          message: result.message || 'Failed to submit report',
+          error: result.error,
+          daysRemaining: result.daysRemaining,
+        };
+      }
+      return {
+        success: true,
+        ...result,
+      };
+    } catch (error: any) {
+      return {
+        success: false,
+        message: error.message || 'Network error occurred',
+        error: error.toString(),
+      };
+    }
+  },
+
+  checkUserReport: async (userId: string) => {
+    try {
+      const token = localStorage.getItem('token');
+      const headers: HeadersInit = {
+        'Content-Type': 'application/json',
+      };
+      if (token) {
+        headers.Authorization = `Bearer ${token}`;
+      }
+
+      const response = await fetch(`${API_ROOT_URL}/support/check-report/${userId}`, {
+        method: 'GET',
+        headers,
+      });
+      const result = await response.json();
+      if (!response.ok) {
+        return {
+          success: false,
+          message: result.message || 'Failed to check report status',
+          error: result.error,
+        };
+      }
+      return {
+        success: true,
+        ...result,
+      };
+    } catch (error: any) {
+      return {
+        success: false,
+        message: error.message || 'Network error occurred',
+        error: error.toString(),
+      };
+    }
+  },
 };
 
+export const notificationApi = {
+  getNotifications: async () => {
+    try {
+      const token = localStorage.getItem('token');
+      const headers: HeadersInit = { 'Content-Type': 'application/json' };
+      if (token) headers.Authorization = `Bearer ${token}`;
+
+      const response = await fetch(`${API_ROOT_URL}/notifications`, { method: 'GET', headers });
+      const result = await response.json();
+      if (!response.ok) {
+        return { success: false, message: result.message || 'Failed to fetch notifications', error: result.error };
+      }
+      return { success: true, ...result };
+    } catch (error: any) {
+      return { success: false, message: error.message || 'Network error occurred', error: error.toString() };
+    }
+  },
+
+  markNotificationAsRead: async (id: string) => {
+    try {
+      const token = localStorage.getItem('token');
+      const headers: HeadersInit = { 'Content-Type': 'application/json' };
+      if (token) headers.Authorization = `Bearer ${token}`;
+
+      const response = await fetch(`${API_ROOT_URL}/notifications/${id}/read`, { method: 'PUT', headers });
+      const result = await response.json();
+      if (!response.ok) {
+        return { success: false, message: result.message || 'Failed to mark notification as read', error: result.error };
+      }
+      return { success: true, ...result };
+    } catch (error: any) {
+      return { success: false, message: error.message || 'Network error occurred', error: error.toString() };
+    }
+  },
+
+  markAllNotificationsAsRead: async () => {
+    try {
+      const token = localStorage.getItem('token');
+      const headers: HeadersInit = { 'Content-Type': 'application/json' };
+      if (token) headers.Authorization = `Bearer ${token}`;
+
+      const response = await fetch(`${API_ROOT_URL}/notifications/mark-all-read`, { method: 'PUT', headers });
+      const result = await response.json();
+      if (!response.ok) {
+        return { success: false, message: result.message || 'Failed to mark all notifications as read', error: result.error };
+      }
+      return { success: true, ...result };
+    } catch (error: any) {
+      return { success: false, message: error.message || 'Network error occurred', error: error.toString() };
+    }
+  },
+
+  deleteNotification: async (id: string) => {
+    try {
+      const token = localStorage.getItem('token');
+      const headers: HeadersInit = { 'Content-Type': 'application/json' };
+      if (token) headers.Authorization = `Bearer ${token}`;
+
+      const response = await fetch(`${API_ROOT_URL}/notifications/${id}`, { method: 'DELETE', headers });
+      const result = await response.json();
+      if (!response.ok) {
+        return { success: false, message: result.message || 'Failed to delete notification', error: result.error };
+      }
+      return { success: true, ...result };
+    } catch (error: any) {
+      return { success: false, message: error.message || 'Network error occurred', error: error.toString() };
+    }
+  },
+};

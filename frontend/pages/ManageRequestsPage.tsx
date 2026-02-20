@@ -1,13 +1,16 @@
 "use client"
 
 import type React from "react"
-import { useState } from "react"
+import { useState, useRef, useEffect } from "react"
 import type { Navigation } from "../App"
-import { SearchIcon } from "../components/icons/MiscIcons"
+// search UI removed
+import { authApi } from "../utils/api"
+import ConfirmModal from "../components/ConfirmModal"
 import { Page } from "../App" // Import Page enum for navigation
 
 interface Request {
   id: string
+  profileId?: string | null
   senderName: string
   senderAvatar: string
   skill: string
@@ -18,8 +21,9 @@ interface Request {
   credits?: number
 }
 
-interface Friend {
+interface Peer {
   id: string
+  profileId?: string
   name: string
   avatar?: string
   skill?: string
@@ -27,108 +31,166 @@ interface Friend {
 }
 
 const ManageRequestsPage: React.FC<{ navigation: Navigation }> = ({ navigation }) => {
-  const [activeTab, setActiveTab] = useState<"incoming" | "outgoing">("incoming")
-  const [searchQuery, setSearchQuery] = useState("")
-  const [statusFilter, setStatusFilter] = useState<"all" | "pending" | "accepted" | "rejected">("all")
+  const [peers, setPeers] = useState<Peer[]>([])
 
-  const [friends, setFriends] = useState<Friend[]>([])
 
-  const [requests, setRequests] = useState<Request[]>([
-    {
-      id: "1",
-      senderName: "Ayesha Rana",
-      senderAvatar: "/asset/p1.jfif",
-      skill: "React Development",
-      message: "I would like to learn React from you. I am a beginner and eager to learn.",
-      requestType: "incoming",
-      status: "pending",
-      sentDate: "2024-11-24T10:30:00",
-    },
-    {
-      id: "2",
-      senderName: "Ali Khan",
-      senderAvatar: "/asset/p2.png",
-      skill: "Python Basics",
-      message: "Can you teach me Python? I have some programming background.",
-      requestType: "incoming",
-      status: "pending",
-      sentDate: "2024-11-23T15:45:00",
-    },
-    {
-      id: "3",
-      senderName: "Jaweria Rehman",
-      senderAvatar: "/asset/p3.jpg",
-      skill: "UI/UX Design",
-      message: "I accepted your request to teach you UI/UX Design!",
-      requestType: "outgoing",
-      status: "accepted",
-      sentDate: "2024-11-22T12:00:00",
-    },
-    {
-      id: "4",
-      senderName: "Ahmad Khan",
-      senderAvatar: "/asset/p4.jpg",
-      skill: "Database Management",
-      message: "Sorry, I cannot teach Database Management right now.",
-      requestType: "outgoing",
-      status: "rejected",
-      sentDate: "2024-11-21T09:20:00",
-    },
-    {
-      id: "5",
-      senderName: "Emaan Fatima",
-      senderAvatar: "/asset/p1.jfif",
-      skill: "JavaScript Advanced",
-      message: "I would love to learn advanced JavaScript concepts with you.",
-      requestType: "incoming",
-      status: "accepted",
-      sentDate: "2024-11-20T14:15:00",
-    },
-  ])
+  const [requests, setRequests] = useState<Request[]>([])
 
-  const filteredRequests = requests.filter((request) => {
-    const matchesTab = request.requestType === activeTab
-    const matchesStatus = statusFilter === "all" || request.status === statusFilter
-    const matchesSearch =
-      request.senderName.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      request.skill.toLowerCase().includes(searchQuery.toLowerCase())
-    return matchesTab && matchesStatus && matchesSearch
-  })
+  useEffect(() => {
+    const load = async () => {
+      try {
+        const reqs = await authApi.getFriendRequests()
+        const frs = await authApi.getFriends()
+
+        const incoming: Request[] = (reqs.success && reqs.data && reqs.data.incoming ? reqs.data.incoming : []).map((r: any) => ({
+          id: r.id,
+          profileId: r.profileId || r.profile_id || r.userId || null,
+          senderName: r.name,
+          senderAvatar: r.profilePic || "/asset/p1.jfif",
+          skill: "",
+          message: "",
+          requestType: "incoming",
+          status: "pending",
+          sentDate: new Date().toISOString()
+        }))
+
+        const outgoing: Request[] = (reqs.success && reqs.data && reqs.data.outgoing ? reqs.data.outgoing : []).map((r: any) => ({
+          id: r.id,
+          profileId: r.profileId || r.profile_id || r.userId || null,
+          senderName: r.name,
+          senderAvatar: r.profilePic || "/asset/p1.jfif",
+          skill: "",
+          message: "",
+          requestType: "outgoing",
+          status: "pending",
+          sentDate: new Date().toISOString()
+        }))
+
+        const peersList: Peer[] = (frs.success && frs.data ? frs.data : []).map((f: any) => ({
+          id: f.id,
+          profileId: f.profileId || null,
+          name: f.name,
+          avatar: f.profilePic || "/asset/p1.jfif",
+          skill: "",
+          connectedSince: new Date().toISOString()
+        }))
+
+        // mark accepted entries as incoming/outgoing depending on whether friend id appeared in incoming set
+        const incomingIds = new Set((reqs.success && reqs.data && reqs.data.incoming ? reqs.data.incoming : []).map((x: any) => x.id))
+
+        setRequests([
+          ...incoming,
+          ...outgoing,
+          ...peersList.map(f => ({
+            id: `f-${f.id}`,
+            profileId: f.profileId || null,
+            senderName: f.name,
+            senderAvatar: f.avatar,
+            skill: f.skill,
+            message: 'You are connected',
+            requestType: incomingIds.has(f.id) ? 'incoming' : 'outgoing',
+            status: 'accepted',
+            sentDate: f.connectedSince
+          }))
+        ])
+
+        setPeers(peersList)
+      } catch (e) {
+        // fallback: keep empty lists
+      }
+    }
+
+    load()
+
+    const onUpdate = () => {
+      load()
+    }
+
+    window.addEventListener('friends:changed', onUpdate)
+    window.addEventListener('friendRequests:changed', onUpdate)
+    return () => {
+      window.removeEventListener('friends:changed', onUpdate)
+      window.removeEventListener('friendRequests:changed', onUpdate)
+    }
+  }, [])
+
+  const filteredRequests = requests.filter((request) => request.requestType === "incoming")
 
   const handleAcceptRequest = (id: string) => {
-    const updated = requests.map((req) => (req.id === id ? { ...req, status: "accepted" as const } : req))
-    const acceptedReq = requests.find((r) => r.id === id)
-    setRequests(updated)
+    const req = requests.find(r => r.id === id)
+    if (!req) return
+      ; (async () => {
+        try {
+          const resp = await authApi.respondFriendRequest(req.id, 'accept')
+          if (resp.success) {
+            // optimistic UI update: mark request accepted and add friend locally
+            setRequests(prev => prev.map(r => r.id === id ? { ...r, status: 'accepted' } : r))
+            addPeer({ id: `f-${req.id}`, name: req.senderName, avatar: req.senderAvatar, skill: req.skill, connectedSince: new Date().toISOString() })
 
-    // If we accepted an incoming request, add both users as friends (local state)
-    if (acceptedReq) {
-      // add friend entry for the sender
-      addFriend({
-        id: `f-${acceptedReq.id}`,
-        name: acceptedReq.senderName,
-        avatar: acceptedReq.senderAvatar,
-        skill: acceptedReq.skill,
-        connectedSince: new Date().toISOString(),
-      })
-
-      // Optionally: if the request was outgoing and now accepted (someone accepted our request),
-      // we also add that connection. Here we're treating all accepts as mutual connections.
-    }
+            // notify other pages to refresh (keeps global state consistent)
+            window.dispatchEvent(new CustomEvent('friendRequests:changed'))
+            window.dispatchEvent(new CustomEvent('friends:changed'))
+          }
+        } catch (e) { }
+      })()
   }
 
-  const addFriend = (f: Friend) => {
-    setFriends((prev) => {
+  const addPeer = (f: Peer) => {
+    setPeers((prev) => {
       if (prev.some((p) => p.name === f.name)) return prev
       return [f, ...prev]
     })
   }
 
-  const removeFriend = (id: string) => {
-    setFriends((prev) => prev.filter((f) => f.id !== id))
+  const removePeer = (id: string) => {
+    ; (async () => {
+      try {
+        const resp = await authApi.removeFriend(id)
+        if (resp.success) {
+          // optimistic remove from local state
+          setPeers(prev => prev.filter(f => f.id !== id))
+          setRequests(prev => prev.filter(r => r.id !== `f-${id}`))
+
+          window.dispatchEvent(new CustomEvent('friends:changed'))
+          window.dispatchEvent(new CustomEvent('friendRequests:changed'))
+        }
+      } catch (e) { }
+    })()
+  }
+
+  const [confirmOpen, setConfirmOpen] = useState(false)
+  const [confirmTarget, setConfirmTarget] = useState<{ id: string; name?: string } | null>(null)
+
+  const openRemoveConfirm = (id: string, name?: string) => {
+    setConfirmTarget({ id, name })
+    setConfirmOpen(true)
+  }
+
+  const handleConfirmRemove = () => {
+    if (!confirmTarget) return
+    removePeer(confirmTarget.id)
+    setConfirmOpen(false)
+    setConfirmTarget(null)
+  }
+
+  const handleCancelRemove = () => {
+    setConfirmOpen(false)
+    setConfirmTarget(null)
   }
 
   const handleRejectRequest = (id: string) => {
-    setRequests(requests.map((req) => (req.id === id ? { ...req, status: "rejected" as const } : req)))
+    const req = requests.find(r => r.id === id)
+    if (!req) return
+      ; (async () => {
+        try {
+          const resp = await authApi.respondFriendRequest(req.id, 'reject')
+          if (resp.success) {
+            // optimistic UI update: mark as rejected immediately
+            setRequests(prev => prev.map(r => r.id === id ? { ...r, status: 'rejected' } : r))
+            window.dispatchEvent(new CustomEvent('friendRequests:changed'))
+          }
+        } catch (e) { }
+      })()
   }
 
   const getStatusBadge = (status: string) => {
@@ -144,225 +206,263 @@ const ManageRequestsPage: React.FC<{ navigation: Navigation }> = ({ navigation }
     return status.charAt(0).toUpperCase() + status.slice(1)
   }
 
+  const SlideAction: React.FC<{
+    onAccept: () => void
+    onReject: () => void
+    acceptLabel?: string
+    rejectLabel?: string
+  }> = ({ onAccept, onReject, acceptLabel = "Accept", rejectLabel = "Decline" }) => {
+    const [percent, setPercent] = useState(50)
+    const trackRef = useRef<HTMLDivElement | null>(null)
+    const dragging = useRef(false)
+
+    const updateFromClientX = (clientX: number) => {
+      const rect = trackRef.current?.getBoundingClientRect()
+      if (!rect) return
+      const x = Math.min(Math.max(clientX - rect.left, 0), rect.width)
+      const p = Math.round((x / rect.width) * 100)
+      setPercent(p)
+    }
+
+    const handlePointerDown = (e: React.PointerEvent) => {
+      dragging.current = true
+        ; (e.target as Element).setPointerCapture?.(e.pointerId)
+      updateFromClientX(e.clientX)
+    }
+
+    useEffect(() => {
+      const onMove = (ev: PointerEvent) => {
+        if (!dragging.current) return
+        updateFromClientX(ev.clientX)
+      }
+      const onUp = () => {
+        if (!dragging.current) return
+        dragging.current = false
+        if (percent >= 90) {
+          onAccept()
+        } else if (percent <= 10) {
+          onReject()
+        }
+        setPercent(50)
+      }
+      window.addEventListener("pointermove", onMove)
+      window.addEventListener("pointerup", onUp)
+      return () => {
+        window.removeEventListener("pointermove", onMove)
+        window.removeEventListener("pointerup", onUp)
+      }
+    }, [percent, onAccept, onReject])
+
+    const knobSize = 56
+
+    return (
+      <div className="w-full flex justify-center">
+        <div ref={trackRef} className="relative w-full max-w-full" style={{ userSelect: "none" }}>
+          <div className="h-10 rounded-full bg-gray-100 overflow-hidden relative">
+            {/* right teal fill anchored to right */}
+            <div
+              className="absolute top-0 bottom-0 rounded-full"
+              style={{
+                right: 0,
+                width: `${100 - percent}%`,
+                background: "#0F4C5C",
+              }}
+            />
+            <div className="absolute inset-0 flex items-center px-5 pointer-events-none">
+              <div className="flex-1 text-left text-white text-sm font-semibold" style={{ color: "rgba(0,0,0,0.6)" }}>
+                {rejectLabel}
+              </div>
+              <div className="flex-1 text-right text-white text-sm font-semibold" style={{ color: "white" }}>
+                {acceptLabel}
+              </div>
+            </div>
+            <div
+              onPointerDown={handlePointerDown}
+              className="absolute top-1/2 -translate-y-1/2 bg-teal-700 shadow-2xl rounded-full"
+              style={{
+                width: knobSize,
+                height: knobSize,
+                left: `calc(${percent}% - ${knobSize / 2}px)`,
+                transition: "left 150ms ease",
+                boxShadow: "0 10px 20px rgba(2,6,23,0.15)",
+                background: "#053847",
+                touchAction: "none",
+              }}
+            />
+          </div>
+        </div>
+      </div>
+    )
+  }
+
   const RequestCard: React.FC<{ request: Request }> = ({ request }) => (
-    <div className="bg-white p-4 sm:p-6 rounded-xl shadow-sm border border-gray-200 hover:shadow-md transition-shadow">
-      <div className="flex items-start justify-between mb-4">
-        <div className="flex items-center gap-3 flex-1 min-w-0">
-          <img
-            src={request.senderAvatar || "/placeholder.svg"}
-            alt={request.senderName}
-            className="w-12 h-12 rounded-full object-cover shrink-0"
-          />
+    <div className="group bg-white p-6 sm:p-8 rounded-3xl shadow-xl shadow-slate-200/60 border border-slate-100 hover:shadow-2xl hover:shadow-cyan-100/50 transition-all duration-300 relative overflow-hidden">
+      <div className="flex items-start justify-between mb-6 relative z-10">
+        <div className="flex items-center gap-4 min-w-0">
+          <div className="w-14 h-14 rounded-2xl p-1 bg-white shadow-sm border border-slate-100 relative">
+            <img
+              src={request.senderAvatar || "/placeholder.svg"}
+              alt={request.senderName}
+              className="w-full h-full rounded-xl object-cover cursor-pointer"
+              onClick={() => { sessionStorage.setItem('selectedProfileId', request.profileId || request.id); navigation.navigateTo(Page.ViewProfile) }}
+            />
+            {request.requestType === 'incoming' && (
+              <div className="absolute -bottom-1 -right-1 w-5 h-5 bg-brand-teal rounded-full border-2 border-white flex items-center justify-center">
+                <svg className="w-3 h-3 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 14l-7 7m0 0l-7-7m7 7V3" /></svg>
+              </div>
+            )}
+          </div>
           <div className="min-w-0">
-            <h3 className="font-semibold text-gray-800 truncate">{request.senderName}</h3>
-            <p className="text-sm text-gray-500 truncate">{request.skill}</p>
+            <h3 className="font-bold text-lg text-slate-800 truncate cursor-pointer hover:text-brand-teal transition-colors" onClick={() => { sessionStorage.setItem('selectedProfileId', request.profileId || request.id); navigation.navigateTo(Page.ViewProfile) }}>{request.senderName}</h3>
+            {request.skill && (
+              <span className="inline-block px-3 py-1 bg-cyan-50 text-cyan-700 text-xs font-bold rounded-full mt-1 truncate max-w-full">
+                {request.skill}
+              </span>
+            )}
           </div>
         </div>
         <span
-          className={`px-3 py-1 rounded-full text-xs font-medium whitespace-nowrap ml-2 ${getStatusBadge(request.status)}`}
+          className={`px-3 py-1.5 rounded-full text-xs font-bold uppercase tracking-wide shadow-sm ml-2 ${getStatusBadge(request.status)}`}
         >
           {getStatusLabel(request.status)}
         </span>
       </div>
 
-      <p className="text-gray-600 text-sm mb-4 line-clamp-3">{request.message}</p>
-
-      <div className="flex items-center justify-between mb-4 text-xs text-gray-500">
-        <span>{new Date(request.sentDate).toLocaleDateString()}</span>
+      <div className="flex items-center justify-between mb-6 text-xs font-medium text-slate-400 relative z-10">
+        <div className="flex items-center gap-1.5 basic-badge">
+          <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" /></svg>
+          <span>{new Date(request.sentDate).toLocaleDateString(undefined, { month: 'short', day: 'numeric' })}</span>
+        </div>
         {request.credits && (
-          <span className="bg-yellow-100 text-yellow-700 px-2 py-1 rounded-full font-medium">
-            {request.credits} credits
+          <span className="bg-amber-100 text-amber-700 px-3 py-1 rounded-full border border-amber-200 flex items-center gap-1">
+            <span>🪙</span> {request.credits} credits
           </span>
         )}
       </div>
 
       {request.status === "pending" && request.requestType === "incoming" && (
-        <div className="flex gap-2">
-          <button
-            onClick={() => handleAcceptRequest(request.id)}
-            className="flex-1 bg-brand-teal text-white py-2 px-4 rounded-lg hover:bg-brand-teal-dark transition-colors text-sm font-medium"
-          >
-            Accept
-          </button>
-          <button
-            onClick={() => handleRejectRequest(request.id)}
-            className="flex-1 bg-gray-100 text-gray-700 py-2 px-4 rounded-lg hover:bg-gray-200 transition-colors text-sm font-medium"
-          >
-            Decline
-          </button>
+        <div className="relative z-10 pt-2 border-t border-slate-100">
+          <SlideAction
+            onAccept={() => handleAcceptRequest(request.id)}
+            onReject={() => handleRejectRequest(request.id)}
+            acceptLabel="Accept"
+            rejectLabel="Decline"
+          />
         </div>
       )}
+
+      {/* Decorative Gradient Blob */}
+      <div className="absolute -top-10 -right-10 w-32 h-32 bg-gradient-to-br from-cyan-100/50 to-teal-100/50 rounded-full blur-3xl -z-0"></div>
     </div>
   )
 
-  const pendingCount = requests.filter((r) => r.requestType === activeTab && r.status === "pending").length
-  const acceptedCount = requests.filter((r) => r.requestType === activeTab && r.status === "accepted").length
-  const rejectedCount = requests.filter((r) => r.requestType === activeTab && r.status === "rejected").length
+
 
   return (
-    <div className="space-y-6">
-      {/* Header */}
-      <div>
-        <h1 className="text-3xl font-bold text-white">Manage Requests</h1>
-        
+    <div className="max-w-6xl mx-auto space-y-6 pb-8">
+      {/* Premium Header */}
+      <div className="relative rounded-2xl overflow-hidden shadow-xl shadow-cyan-100/50">
+        <div className="absolute inset-0 bg-gradient-to-r from-brand-teal to-cyan-500 text-white"></div>
+        <div className="relative z-10 p-6 sm:p-8 flex flex-col items-center sm:items-start gap-3">
+          <h1 className="text-2xl sm:text-3xl font-bold text-white tracking-tight">Manage Requests</h1>
+          <p className="text-cyan-50 text-base max-w-2xl">View your incoming connection requests and manage your friend list.</p>
+        </div>
       </div>
 
       {/* Friends Section */}
-      <div className="bg-white p-4 sm:p-6 rounded-xl shadow-sm">
-        <div className="flex items-center justify-between mb-4">
-          <div>
-            <p className="text-sm text-gray-600">Friends</p>
-            <p className="text-2xl font-bold">{friends.length}</p>
-          </div>
-          <div className="flex gap-2">
-            {friends.slice(0, 6).map((fr) => (
-              <div key={fr.id} title={fr.name} className="w-10 h-10 rounded-full bg-gray-100 flex items-center justify-center text-sm overflow-hidden">
+      <div className="bg-white p-5 sm:p-6 rounded-2xl shadow-lg shadow-slate-200/60 border border-slate-100">
+        <div className="flex items-center justify-between mb-5">
+          <h2 className="text-lg font-bold text-slate-800 flex items-center gap-2">
+            <span className="w-1.5 h-5 bg-brand-teal rounded-full"></span>
+            My Peers <span className="text-slate-400 font-normal text-base">({peers.length})</span>
+          </h2>
+          {/* Quick Avatar Stack */}
+          <div className="flex -space-x-2 overflow-hidden p-1">
+            {peers.slice(0, 6).map((fr) => (
+              <div key={fr.id} title={fr.name} className="w-8 h-8 rounded-full border-2 border-white ring-2 ring-slate-100 shadow-sm overflow-hidden cursor-pointer hover:scale-110 transition-transform relative z-0 hover:z-10" onClick={() => {
+                sessionStorage.setItem('selectedProfileId', fr.profileId || fr.id)
+                navigation.navigateTo(Page.ViewProfile)
+              }}>
                 <img src={fr.avatar || '/placeholder.svg'} alt={fr.name} className="w-full h-full object-cover" />
               </div>
             ))}
+            {peers.length > 6 && (
+              <div className="w-8 h-8 rounded-full border-2 border-white bg-slate-100 flex items-center justify-center text-xs font-bold text-slate-500 z-0">
+                +{peers.length - 6}
+              </div>
+            )}
           </div>
         </div>
 
-        {friends.length === 0 ? (
-          <p className="text-sm text-gray-500">You have no friends yet. Accept a request to connect.</p>
+        {peers.length === 0 ? (
+          <div className="text-center py-6 bg-slate-50/50 rounded-xl border border-dashed border-slate-200">
+            <p className="text-slate-500 italic text-sm">You have no peers yet. Accept a request to connect.</p>
+          </div>
         ) : (
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
-            {friends.map((fr) => (
-              <div key={fr.id} className="border border-gray-200 rounded-lg p-3 flex items-center gap-3">
-                <img src={fr.avatar || '/placeholder.svg'} alt={fr.name} className="w-10 h-10 rounded-full object-cover" />
-                <div className="flex-1 min-w-0">
-                  <div className="flex items-center justify-between">
-                    <h4 className="font-semibold text-gray-800 truncate">{fr.name}</h4>
-                    <span className="text-xs text-gray-500">{new Date(fr.connectedSince).toLocaleDateString()}</span>
-                  </div>
-                  <p className="text-xs text-gray-500">{fr.skill}</p>
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3">
+            {peers.map((fr) => (
+              <div key={fr.id} className="group bg-slate-50 hover:bg-white border border-slate-200 hover:border-brand-teal/30 rounded-xl p-3 flex items-center gap-3 transition-all hover:shadow-lg hover:shadow-cyan-100/40">
+                <div className="cursor-pointer flex-shrink-0" onClick={() => { sessionStorage.setItem('selectedProfileId', fr.profileId || fr.id); navigation.navigateTo(Page.ViewProfile) }}>
+                  <img src={fr.avatar || '/placeholder.svg'} alt={fr.name} className="w-10 h-10 rounded-full object-cover shadow-sm border border-white" />
                 </div>
-                <div className="flex flex-col gap-2">
-                  <button 
-                    onClick={() => navigation.navigateTo(Page.Messenger)} // Redirect to Messenger page
-                    className="text-sm bg-brand-teal text-white px-3 py-1 rounded-lg"
+                <div className="flex-1 min-w-0">
+                  <div className="flex items-center justify-between mb-0.5">
+                    <h4 className="font-bold text-slate-800 truncate cursor-pointer hover:text-brand-teal transition-colors text-sm" onClick={() => { sessionStorage.setItem('selectedProfileId', fr.profileId || fr.id); navigation.navigateTo(Page.ViewProfile) }}>{fr.name}</h4>
+                  </div>
+                </div>
+                <div className="flex flex-col gap-1.5 opacity-0 group-hover:opacity-100 transition-opacity">
+                  <button
+                    onClick={() => {
+                      const normalizedId = fr.profileId || (typeof fr.id === 'string' && fr.id.startsWith('f-') ? fr.id.replace(/^f-/, '') : fr.id)
+                      sessionStorage.setItem("selectedChatUserId", normalizedId as string)
+                      navigation.navigateTo(Page.Messenger)
+                      try {
+                        window.dispatchEvent(new CustomEvent('open:chat', { detail: normalizedId }))
+                      } catch (e) { }
+                    }}
+                    className="p-1.5 bg-brand-teal text-white rounded-lg hover:bg-brand-teal-dark shadow-sm transition-colors"
+                    title="Message"
                   >
-                    Message
+                    <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 10h.01M12 10h.01M16 10h.01M9 16H5a2 2 0 01-2-2V6a2 2 0 012-2h14a2 2 0 012 2v8a2 2 0 01-2 2h-5l-5 5v-5z" /></svg>
                   </button>
-                  <button onClick={() => removeFriend(fr.id)} className="text-sm bg-gray-100 px-3 py-1 rounded-lg">Remove</button>
+                  <button onClick={() => openRemoveConfirm(fr.id, fr.name)} className="p-1.5 bg-slate-200 text-slate-600 hover:bg-red-100 hover:text-red-500 rounded-lg transition-colors" title="Remove Peer">
+                    <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" /></svg>
+                  </button>
                 </div>
               </div>
             ))}
           </div>
         )}
       </div>
+      <ConfirmModal
+        open={confirmOpen}
+        title="Remove Peer"
+        message={confirmTarget ? `Are you sure you want to remove ${confirmTarget.name || 'this person'} from your peers list?` : 'Are you sure you want to remove this peer?'}
+        confirmLabel="Remove"
+        cancelLabel="Cancel"
+        onConfirm={handleConfirmRemove}
+        onCancel={handleCancelRemove}
+      />
 
-      {/* Stats */}
-      <div className="grid grid-cols-3 gap-4">
-        <div className="bg-white p-4 sm:p-6 rounded-xl shadow-sm">
-          <p className="text-gray-500 text-sm mb-1">Pending</p>
-          <p className="text-3xl font-bold text-blue-500">{pendingCount}</p>
+      {/* Requests Section */}
+      <div className="pt-4">
+        <div className="flex items-center gap-4 mb-6">
+          <h2 className="text-2xl font-bold text-white flex items-center gap-2">
+            Incoming Requests
+            <span className="bg-brand-teal text-white text-sm font-bold px-2.5 py-0.5 rounded-full shadow-sm">{filteredRequests.length}</span>
+          </h2>
         </div>
-        <div className="bg-white p-4 sm:p-6 rounded-xl shadow-sm">
-          <p className="text-gray-500 text-sm mb-1">Accepted</p>
-          <p className="text-3xl font-bold text-green-600">{acceptedCount}</p>
-        </div>
-        <div className="bg-white p-4 sm:p-6 rounded-xl shadow-sm">
-          <p className="text-gray-500 text-sm mb-1">Rejected</p>
-          <p className="text-3xl font-bold text-red-600">{rejectedCount}</p>
-        </div>
-      </div>
 
-      {/* Tabs */}
-      <div className="flex gap-3 mb-4">
-  {/* Incoming Requests Button */}
-  <button
-    onClick={() => setActiveTab("incoming")}
-    className={`px-5 py-2.5 rounded-lg font-semibold transition-all ${
-      activeTab === "incoming"
-        ? "bg-brand-teal text-white shadow-md"
-        : "bg-white border border-gray-300 text-gray-600 hover:bg-gray-100"
-    }`}
-  >
-    Incoming Requests
-  </button>
-
-  {/* Sent Requests Button */}
-  <button
-    onClick={() => setActiveTab("outgoing")}
-    className={`px-5 py-2.5 rounded-lg font-semibold transition-all ${
-      activeTab === "outgoing"
-        ? "bg-brand-teal text-white shadow-md"
-        : "bg-white border border-gray-300 text-gray-600 hover:bg-gray-100"
-    }`}
-  >
-    Sent Requests
-  </button>
-</div>
-
-
-      {/* Search and Filters */}
-      <div className="bg-white p-4 rounded-xl shadow-sm">
-        <div className="flex flex-col gap-4">
-          <div className="flex flex-col sm:flex-row gap-4">
-            <div className="flex-grow relative">
-              <input
-                type="text"
-                placeholder="Search by name or skill..."
-                value={searchQuery}
-                onChange={(e) => setSearchQuery(e.target.value)}
-                className="w-full bg-gray-50 rounded-lg py-2 pl-10 pr-4 border border-gray-200 focus:outline-none focus:ring-2 focus:ring-brand-teal/50"
-              />
-              <SearchIcon className="w-5 h-5 text-gray-400 absolute left-3 top-1/2 -translate-y-1/2" />
-            </div>
-          </div>
-
-          <div className="flex gap-2 overflow-x-auto">
-            <button
-              onClick={() => setStatusFilter("all")}
-              className={`px-4 py-2 rounded-lg font-medium transition-colors whitespace-nowrap text-sm ${
-                statusFilter === "all" ? "bg-brand-teal text-white" : "bg-gray-100 text-gray-600 hover:bg-gray-200"
-              }`}
-            >
-              All Status
-            </button>
-            <button
-              onClick={() => setStatusFilter("pending")}
-              className={`px-4 py-2 rounded-lg font-medium transition-colors whitespace-nowrap text-sm ${
-                statusFilter === "pending" ? "bg-brand-teal text-white" : "bg-gray-100 text-gray-600 hover:bg-gray-200"
-              }`}
-            >
-              Pending
-            </button>
-            <button
-              onClick={() => setStatusFilter("accepted")}
-              className={`px-4 py-2 rounded-lg font-medium transition-colors whitespace-nowrap text-sm ${
-                statusFilter === "accepted" ? "bg-brand-teal text-white" : "bg-gray-100 text-gray-600 hover:bg-gray-200"
-              }`}
-            >
-              Accepted
-            </button>
-            <button
-              onClick={() => setStatusFilter("rejected")}
-              className={`px-4 py-2 rounded-lg font-medium transition-colors whitespace-nowrap text-sm ${
-                statusFilter === "rejected" ? "bg-brand-teal text-white" : "bg-gray-100 text-gray-600 hover:bg-gray-200"
-              }`}
-            >
-              Rejected
-            </button>
-          </div>
-        </div>
-      </div>
-
-      {/* Requests List */}
-      <div>
         {filteredRequests.length === 0 ? (
-          <div className="bg-white p-12 rounded-xl shadow-sm text-center">
-            <div className="text-6xl mb-4">📧</div>
-            <h3 className="text-xl font-semibold text-gray-700 mb-2">No Requests Found</h3>
-            <p className="text-gray-500">
-              {activeTab === "incoming"
-                ? "You don't have any incoming requests yet"
-                : "You haven't sent any requests yet"}
-            </p>
+          <div className="bg-white p-16 rounded-3xl shadow-xl shadow-slate-200/60 border border-slate-100 text-center">
+            <div className="w-20 h-20 bg-slate-50 rounded-full flex items-center justify-center mx-auto mb-6">
+              <span className="text-4xl">📭</span>
+            </div>
+            <h3 className="text-xl font-bold text-slate-800 mb-2">No Requests Found</h3>
+            <p className="text-slate-500 text-lg">You don't have any incoming connection requests at the moment.</p>
           </div>
         ) : (
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
             {filteredRequests.map((request) => (
               <RequestCard key={request.id} request={request} />
             ))}
