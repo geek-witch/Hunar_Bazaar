@@ -7,6 +7,13 @@ const supportIssueSchema = new mongoose.Schema({
     required: false, 
     default: null
   },
+  // When category is used to report a user, store who was reported
+  reportedUserId: {
+    type: mongoose.Schema.Types.ObjectId,
+    ref: 'User',
+    required: false,
+    default: null
+  },
   category: {
     type: String,
     required: true,
@@ -47,7 +54,16 @@ const supportIssueSchema = new mongoose.Schema({
       type: Date,
       default: Date.now
     }
-  }]
+  }],
+  adminNotes: {
+    type: String,
+    default: null,
+    trim: true
+  },
+  resolvedAt: {
+    type: Date,
+    default: null
+  }
 }, {
   timestamps: true
 });

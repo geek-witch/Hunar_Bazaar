@@ -9,33 +9,33 @@ const profileSchema = new mongoose.Schema({
   },
   firstName: {
     type: String,
-    required: true,
+    required: [true, 'First name is required'],
     trim: true
   },
   lastName: {
     type: String,
-    required: true,
+    required: [true, 'Last name is required'],
     trim: true
   },
   dob: {
     type: Date,
-    required: true
+    required: [true, 'Date of birth is required']
   },
   bio: {
     type: String,
-    required: true,
+    required: [true, 'Bio is required'],
     minlength: [20, 'Bio must be at least 20 characters'],
     maxlength: [500, 'Bio must not exceed 500 characters']
   },
   profilePic: {
-    type: String, 
+    type: String,
     default: null
   },
   teachSkills: {
     type: [String],
     required: true,
     validate: {
-      validator: function(v) {
+      validator: function (v) {
         return v.length > 0;
       },
       message: 'At least one skill to teach is required'
@@ -45,7 +45,7 @@ const profileSchema = new mongoose.Schema({
     type: [String],
     required: true,
     validate: {
-      validator: function(v) {
+      validator: function (v) {
         return v.length > 0;
       },
       message: 'At least one skill to learn is required'
@@ -67,7 +67,7 @@ const profileSchema = new mongoose.Schema({
         type: [String],
         required: true,
         validate: {
-          validator: function(v) {
+          validator: function (v) {
             const validDays = ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday', 'Sunday'];
             return v.length > 0 && v.every(day => validDays.includes(day));
           },
@@ -77,7 +77,7 @@ const profileSchema = new mongoose.Schema({
     }],
     required: true,
     validate: {
-      validator: function(v) {
+      validator: function (v) {
         return Array.isArray(v) && v.length > 0;
       },
       message: 'At least one availability slot is required'
@@ -88,7 +88,7 @@ const profileSchema = new mongoose.Schema({
     default: []
   },
   roadmap: {
-    type: mongoose.Schema.Types.Mixed, 
+    type: mongoose.Schema.Types.Mixed,
     default: null
   },
   suggestions: {
@@ -100,6 +100,20 @@ const profileSchema = new mongoose.Schema({
     default: false
   },
   creditNumber: {
+    type: Number,
+    default: 0,
+    min: 0
+  },
+  totalLearnedHours: {
+    type: Number,
+    default: 0,
+    min: 0
+  },
+  badges: {
+    type: [String], // Array of badge names
+    default: []
+  },
+  skillsMastered: {
     type: Number,
     default: 0,
     min: 0

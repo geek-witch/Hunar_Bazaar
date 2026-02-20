@@ -193,10 +193,111 @@ If you have any further questions, please reply to this email or submit a new su
   }
 };
 
+const sendWarningEmail = async (email, userName, warningMessage) => {
+  const mailOptions = {
+    from: `"Hunar Bazaar Admin" <${process.env.EMAIL_USER}>`,
+    to: email,
+    subject: 'Account Warning - Hunar Bazaar',
+    html: `
+      <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
+        <h2 style="color: #dc2626;">Account Warning</h2>
+        <p>Hello ${userName},</p>
+        <p>Your account has been flagged for violating our community guidelines. We take the safety and respect of our community seriously.</p>
+        
+        <div style="background-color: #fef2f2; border: 2px solid #dc2626; border-radius: 8px; padding: 20px; margin: 20px 0;">
+          <h3 style="color: #dc2626; margin-top: 0;">Warning Details:</h3>
+          <p style="color: #374151; line-height: 1.6; white-space: pre-wrap;">${warningMessage}</p>
+        </div>
+        
+        <p style="color: #6b7280; font-size: 14px;">
+          <strong>Next Steps:</strong><br>
+          Please review your activities and ensure you are following our community guidelines going forward. Repeated violations may result in account suspension or deletion.
+        </p>
+        
+        <p style="color: #6b7280;">
+          If you believe this warning was issued in error, please contact our support team.
+        </p>
+        
+        <div style="margin-top: 30px; padding-top: 20px; border-top: 1px solid #e5e7eb; text-align: center;">
+          <p style="color: #6b7280; font-size: 12px;">
+            © 2025 Hunar Bazaar. All rights reserved.
+          </p>
+        </div>
+      </div>
+    `,
+    text: `
+Account Warning
+
+Hello ${userName},
+
+Your account has been flagged for violating our community guidelines.
+
+Warning Details:
+${warningMessage}
+
+Next Steps:
+Please review your activities and ensure you are following our community guidelines going forward. Repeated violations may result in account suspension or deletion.
+
+If you believe this warning was issued in error, please contact our support team.
+
+© 2025 Hunar Bazaar. All rights reserved.
+    `
+  };
+
+  try {
+    const info = await transporter.sendMail(mailOptions);
+    return { success: true, messageId: info.messageId };
+  } catch (error) {
+    console.error('Error sending warning email:', error);
+    throw error;
+  }
+};
+
+const sendSessionNotification = async (email, studentName, teacherName, skill, date, time, action) => {
+  const actionText = action === 'scheduled' ? 'scheduled' : 'cancelled';
+  const subject = `Session ${actionText.charAt(0).toUpperCase() + actionText.slice(1)} - Hunar Bazaar`;
+  
+  const mailOptions = {
+    from: `"Hunar Bazaar" <${process.env.EMAIL_USER}>`,
+    to: email,
+    subject: subject,
+    html: `
+      <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
+        <h2 style="color: #14b8a6;">Session ${actionText.charAt(0).toUpperCase() + actionText.slice(1)}</h2>
+        <p>Hi ${studentName},</p>
+        <p>Your learning session has been ${actionText}:</p>
+        <div style="background-color: #f0fdfa; border: 2px solid #14b8a6; border-radius: 8px; padding: 20px; margin: 20px 0;">
+          <h3 style="color: #14b8a6; margin-top: 0;">Session Details</h3>
+          <p><strong>Teacher:</strong> ${teacherName}</p>
+          <p><strong>Skill:</strong> ${skill}</p>
+          <p><strong>Date:</strong> ${date}</p>
+          <p><strong>Time:</strong> ${time}</p>
+        </div>
+        ${action === 'scheduled' ? 
+          '<p>Please be ready 5 minutes before the session starts. You will receive the meeting link closer to the session time.</p>' :
+          '<p>If you have any questions, please contact your teacher or our support team.</p>'
+        }
+        <hr style="border: none; border-top: 1px solid #e5e7eb; margin: 20px 0;">
+        <p style="color: #6b7280; font-size: 12px;">© 2025 Hunar Bazaar. All rights reserved.</p>
+      </div>
+    `
+  };
+
+  try {
+    const info = await transporter.sendMail(mailOptions);
+    return { success: true, messageId: info.messageId };
+  } catch (error) {
+    console.error(`Error sending session ${action} email:`, error);
+    throw error;
+  }
+};
+
 module.exports = {
   sendOTPEmail,
   sendPasswordResetEmail,
   sendContactEmail,
-  sendSupportReplyEmail
+  sendSupportReplyEmail,
+  sendWarningEmail,
+  sendSessionNotification
 };
 

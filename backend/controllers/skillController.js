@@ -33,15 +33,32 @@ exports.browseSkills = async (req, res) => {
     const searchTerm = (req.query.search || '').toString().trim();
 
     const filters = {};
+    let blockedUserIds = [];
+    
+    if (req.user && req.user._id) {
+      filters.userId = { $ne: req.user._id };
+      
+      // Fetch current user's blocked list
+      const User = require('../models/User');
+      const currentUser = await User.findById(req.user._id).select('blockedUsers').lean();
+      blockedUserIds = (currentUser?.blockedUsers || []).map(id => id.toString());
+    }
+    
     if (searchTerm) {
-      const regex = new RegExp(searchTerm, 'i');
+      const escapedSearchTerm = searchTerm.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+      const regex = new RegExp(escapedSearchTerm, 'i');
       filters.$or = [
         { firstName: regex },
         { lastName: regex },
-        { teachSkills: regex },
-        { learnSkills: regex },
+        { teachSkills: { $regex: escapedSearchTerm, $options: 'i' } },
+        { learnSkills: { $regex: escapedSearchTerm, $options: 'i' } },
         { bio: regex }
       ];
+    }
+
+    // Add blocked users to filter to exclude them
+    if (blockedUserIds.length > 0) {
+      filters.userId = { $ne: req.user._id, $nin: blockedUserIds };
     }
 
     const profiles = await Profile.find(filters)
@@ -75,56 +92,6 @@ exports.browseSkills = async (req, res) => {
     res.status(500).json({
       success: false,
       message: 'Error fetching skills',
-      error: error.message
-    });
-  }
-};
-
-exports.getProfileById = async (req, res) => {
-  try {
-    const { profileId } = req.params;
-
-    if (!profileId) {
-      return res.status(400).json({
-        success: false,
-        message: 'Profile id is required'
-      });
-    }
-
-    const profile = await Profile.findById(profileId)
-      .populate('userId', 'name email isVerified')
-      .lean();
-
-    if (!profile) {
-      return res.status(404).json({
-        success: false,
-        message: 'Profile not found'
-      });
-    }
-
-    const fallbackName = [profile.firstName, profile.lastName].filter(Boolean).join(' ') || 'Hunar Bazaar Member';
-
-    res.status(200).json({
-      success: true,
-      data: {
-        id: profile.userId?._id?.toString() || profile._id.toString(),
-        profileId: profile._id.toString(),
-        name: profile.userId?.name || fallbackName,
-        email: profile.userId?.email || '',
-        bio: profile.bio || '',
-        teachSkills: profile.teachSkills || [],
-        learnSkills: profile.learnSkills || [],
-        availability: profile.availability || [],
-        profilePic: profile.profilePic || null,
-        socialLinks: profile.socialLinks || [],
-        isVerified: profile.userId?.isVerified || false,
-      }
-    });
-  } catch (error) {
-    console.error('Get profile by id error:', error);
-    res.status(500).json({
-      success: false,
-      message: 'Error fetching profile',
       error: error.message
     });
   }

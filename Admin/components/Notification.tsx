@@ -1,6 +1,5 @@
 
 import React, { useEffect } from 'react';
-import { CheckCircle } from 'lucide-react';
 
 interface NotificationProps {
   message: string;
@@ -8,7 +7,7 @@ interface NotificationProps {
   duration?: number;
 }
 
-export const Notification: React.FC<NotificationProps> = ({ message, onClose, duration = 8000 }) => {
+export const Notification: React.FC<NotificationProps> = ({ message, onClose, duration = 5000 }) => {
   useEffect(() => {
     const timer = setTimeout(() => {
       onClose();
@@ -17,21 +16,25 @@ export const Notification: React.FC<NotificationProps> = ({ message, onClose, du
   }, [onClose, duration]);
 
   return (
-    <div className="fixed top-6 left-1/2 -translate-x-1/2 z-[100] animate-in fade-in slide-in-from-top-4 duration-300 w-full max-w-sm px-4">
-      <div className="bg-[#E6EEF9] border-l-4 border-[#0E4B5B] px-6 py-4 rounded-lg shadow-2xl flex items-center gap-4 w-full relative">
-        <div className="bg-[#0E4B5B]/10 p-2 rounded-full text-[#0E4B5B]">
-          <CheckCircle size={24} />
+    <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-[100]">
+      <div className="bg-white rounded-xl shadow-2xl p-6 max-w-md w-full mx-4 border-l-4 border-[#0E4B5B]">
+        <div className="text-center">
+          <div className="mb-4">
+            <div className="mx-auto flex items-center justify-center h-12 w-12 rounded-full bg-[#0E4B5B]/10">
+              <svg className="h-6 w-6 text-[#0E4B5B]" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
+              </svg>
+            </div>
+          </div>
+          <h3 className="text-lg font-semibold text-gray-800 mb-2">System Message</h3>
+          <p className="text-gray-600 mb-6">{message}</p>
+          <button
+            onClick={onClose}
+            className="w-full bg-[#0E4B5B] text-white py-2 px-6 rounded-lg font-medium hover:bg-[#093540] transition-colors"
+          >
+            OK
+          </button>
         </div>
-        <div className="flex-1">
-          <p className="font-bold text-[#0E4B5B] text-lg">System Message</p>
-          <p className="text-gray-600 text-sm">{message}</p>
-        </div>
-        <button 
-          onClick={onClose}
-          className="bg-[#0E4B5B] text-white px-4 py-1.5 rounded-md text-xs font-bold hover:bg-[#093540] transition-colors uppercase tracking-wide"
-        >
-          ok
-        </button>
       </div>
     </div>
   );

@@ -1,31 +1,11 @@
-import React from 'react';
-import { 
-  AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, 
+import React, { useEffect, useState } from 'react';
+import {
+  AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer,
   BarChart, Bar
 } from 'recharts';
 
-import { Users, AlertCircle, Coins, Share2 } from 'lucide-react'; 
-
-const data = [
-  { name: 'Jan', users: 400, complaints: 24 },
-  { name: 'Feb', users: 520, complaints: 30 },
-  { name: 'Mar', users: 610, complaints: 38 },
-  { name: 'Apr', users: 700, complaints: 39 },
-  { name: 'May', users: 750, complaints: 48 },
-  { name: 'Jun', users: 820, complaints: 38 },
-  { name: 'Jul', users: 870, complaints: 43 },
-  { name: 'Aug', users: 900, complaints: 40 },
-  { name: 'Sep', users: 930, complaints: 33 },
-  { name: 'Oct', users: 960, complaints: 28 },
-  { name: 'Nov', users: 990, complaints: 20 },
-  { name: 'Dec', users: 1000, complaints: 25 },
-];
-
-const revenueData = [
-  { name: 'Basic', value: 4000 },
-  { name: 'Premium', value: 8500 },
-  { name: 'Pro', value: 9000 },
-];
+import { Users, AlertCircle, Coins, Share2 } from 'lucide-react';
+import { adminApi } from '../utils/api';
 
 const StatCard = ({ title, value, icon: Icon, color }) => (
   <div className="bg-[#E6EEF9] p-6 rounded-2xl shadow-sm border border-blue-100 flex items-center justify-between transition-transform hover:-translate-y-1 duration-300 w-full relative z-10">
@@ -40,9 +20,51 @@ const StatCard = ({ title, value, icon: Icon, color }) => (
 );
 
 export const Dashboard = () => {
+  const [stats, setStats] = useState<{
+    totalUsers: string;
+    activeDisputes: string;
+    monthlyRevenue: string;
+    successfulExchanges: string;
+    chartData: any[];
+    revenueBreakdown: any[];
+  }>({
+    totalUsers: '0',
+    activeDisputes: '0',
+    monthlyRevenue: 'PKR 0',
+    successfulExchanges: '0',
+    chartData: [],
+    revenueBreakdown: []
+  });
+  const [isReady, setIsReady] = useState(false);
+
+  useEffect(() => {
+    const fetchStats = async () => {
+      try {
+        const resp = await adminApi.getDashboardStats();
+        if (resp.success) {
+          setStats({
+            totalUsers: resp.data.totalUsers.toLocaleString(),
+            activeDisputes: resp.data.activeDisputes.toString(),
+            monthlyRevenue: resp.data.monthlyRevenue,
+            successfulExchanges: resp.data.successfulExchanges.toLocaleString(),
+            chartData: resp.data.chartData || [],
+            revenueBreakdown: resp.data.revenueBreakdown || []
+          });
+        }
+      } catch (err) {
+        console.error('Failed to fetch dashboard stats:', err);
+      }
+    };
+    fetchStats();
+
+    // Delay chart rendering to fix Recharts width/height warning
+    const timer = setTimeout(() => setIsReady(true), 100);
+    return () => clearTimeout(timer);
+  }, []);
+
   return (
     <div className="relative">
-    <div className="space-y-8 relative z-10">
+      <div className="space-y-8 relative z-10">
 
         {/* BANNER */}
         <div className="bg-gradient-to-r from-[#0E4B5B] to-[#1a6b7d] rounded-2xl p-6 lg:p-8 border border-[#0E4B5B]/30 shadow-lg relative overflow-hidden">
@@ -74,10 +96,10 @@ export const Dashboard = () => {
 
         {/* STAT CARDS */}
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
-          <StatCard title="Total Users" value="12,345" icon={Users} color="bg-blue-600" />
-          <StatCard title="Active Disputes" value="23" icon={AlertCircle} color="bg-red-500" />
-          <StatCard title="Monthly Revenue" value="PKR 450k" icon={Coins} color="bg-[#0E4B5B]" /> 
-          <StatCard title="Successful Skill Exchanges" value="8,942" icon={Share2} color="bg-green-500" />
+          <StatCard title="Total Users" value={stats.totalUsers} icon={Users} color="bg-blue-600" />
+          <StatCard title="Active Disputes" value={stats.activeDisputes} icon={AlertCircle} color="bg-red-500" />
+          <StatCard title="Monthly Revenue" value={stats.monthlyRevenue} icon={Coins} color="bg-[#0E4B5B]" />
+          <StatCard title="Successful Skill Exchanges" value={stats.successfulExchanges} icon={Share2} color="bg-green-500" />
         </div>
 
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
@@ -87,31 +109,33 @@ export const Dashboard = () => {
             <h3 className="text-xl font-bold text-[#0E4B5B] mb-6">User Growth & Complaints</h3>
 
             <div className="h-[300px] sm:h-[350px] w-full">
-              <ResponsiveContainer width="100%" height="100%">
-                <AreaChart data={data} margin={{ top: 0, right: 0, left: 50, bottom: 0 }}>
-                  <defs>
-                    <linearGradient id="colorUsers" x1="0" y1="0" x2="0" y2="1">
-                      <stop offset="5%" stopColor="#0E4B5B" stopOpacity={0.8}/>
-                      <stop offset="95%" stopColor="#0E4B5B" stopOpacity={0}/>
-                    </linearGradient>
-                    <linearGradient id="colorComplaints" x1="0" y1="0" x2="0" y2="1">
-                      <stop offset="5%" stopColor="#ef4444" stopOpacity={0.8}/>
-                      <stop offset="95%" stopColor="#ef4444" stopOpacity={0}/>
-                    </linearGradient>
-                  </defs>
+              {isReady && (
+                <ResponsiveContainer width="100%" height="100%">
+                  <AreaChart data={stats.chartData} margin={{ top: 0, right: 0, left: 50, bottom: 0 }}>
+                    <defs>
+                      <linearGradient id="colorUsers" x1="0" y1="0" x2="0" y2="1">
+                        <stop offset="5%" stopColor="#0E4B5B" stopOpacity={0.8} />
+                        <stop offset="95%" stopColor="#0E4B5B" stopOpacity={0} />
+                      </linearGradient>
+                      <linearGradient id="colorComplaints" x1="0" y1="0" x2="0" y2="1">
+                        <stop offset="5%" stopColor="#ef4444" stopOpacity={0.8} />
+                        <stop offset="95%" stopColor="#ef4444" stopOpacity={0} />
+                      </linearGradient>
+                    </defs>
 
-                  <XAxis dataKey="name" tick={{ fill: "#0E4B5B", fontWeight: 600 }} />
-                  <YAxis tick={{ fill: "#28474fff", fontWeight: 600 }} domain={[0, 1000]} />
-                  <CartesianGrid strokeDasharray="3 3" stroke="#cbd5e1" vertical={false} />
+                    <XAxis dataKey="name" tick={{ fill: "#0E4B5B", fontWeight: 600 }} />
+                    <YAxis tick={{ fill: "#28474fff", fontWeight: 600 }} domain={[0, 1000]} />
+                    <CartesianGrid strokeDasharray="3 3" stroke="#cbd5e1" vertical={false} />
 
-                  <Tooltip
-                    contentStyle={{ borderRadius: 10, border: "none", background: "#fff", padding: "10px" }}
-                  />
+                    <Tooltip
+                      contentStyle={{ borderRadius: 10, border: "none", background: "#fff", padding: "10px" }}
+                    />
 
-                  <Area type="monotone" dataKey="users" stroke="#0E4B5B" strokeWidth={3} fill="url(#colorUsers)" />
-                  <Area type="monotone" dataKey="complaints" stroke="#ef4444" strokeWidth={3} fill="url(#colorComplaints)" />
-                </AreaChart>
-              </ResponsiveContainer>
+                    <Area type="monotone" dataKey="users" stroke="#0E4B5B" strokeWidth={3} fill="url(#colorUsers)" />
+                    <Area type="monotone" dataKey="complaints" stroke="#ef4444" strokeWidth={3} fill="url(#colorComplaints)" />
+                  </AreaChart>
+                </ResponsiveContainer>
+              )}
             </div>
           </div>
 
@@ -120,20 +144,22 @@ export const Dashboard = () => {
             <h3 className="text-xl font-bold text-[#0E4B5B] mb-6">Revenue by Plan</h3>
 
             <div className="h-[300px] sm:h-[350px] w-full">
-              <ResponsiveContainer width="100%" height="100%">
-                <BarChart data={revenueData} margin={{ top: 0, right: 0, left: 50, bottom: 0 }}>
-                  <CartesianGrid strokeDasharray="3 3" stroke="#cbd5e1" vertical={false} />
+              {isReady && (
+                <ResponsiveContainer width="100%" height="100%">
+                  <BarChart data={stats.revenueBreakdown} margin={{ top: 0, right: 0, left: 50, bottom: 0 }}>
+                    <CartesianGrid strokeDasharray="3 3" stroke="#cbd5e1" vertical={false} />
 
-                  <XAxis dataKey="name" tick={{ fill: "#0E4B5B", fontWeight: 600 }} />
-                  <YAxis tick={{ fill: "#0E4B5B", fontWeight: 600 }} domain={[0, 10000]} />
+                    <XAxis dataKey="name" tick={{ fill: "#0E4B5B", fontWeight: 600 }} />
+                    <YAxis tick={{ fill: "#0E4B5B", fontWeight: 600 }} domain={[0, 10000]} />
 
-                  <Tooltip
-                    contentStyle={{ borderRadius: 10, background: "#fff", border: "none", padding: "10px" }}
-                  />
+                    <Tooltip
+                      contentStyle={{ borderRadius: 10, background: "#fff", border: "none", padding: "10px" }}
+                    />
 
-                  <Bar dataKey="value" fill="#0E4B5B" radius={[6, 6, 0, 0]} />
-                </BarChart>
-              </ResponsiveContainer>
+                    <Bar dataKey="value" fill="#0E4B5B" radius={[6, 6, 0, 0]} />
+                  </BarChart>
+                </ResponsiveContainer>
+              )}
             </div>
           </div>
 
