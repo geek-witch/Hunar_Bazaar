@@ -5,7 +5,7 @@ export type SubscriptionType = 'Free' | 'Premium' | 'Professional';
 export interface HistoryEvent {
   id: string;
   date: string;
-  type: 'Complaint' | 'Restriction' | 'Info';
+  type: 'Complaint' | 'Restriction' | 'Info' | 'Suspension' | 'Message' | 'Warning';
   description: string;
 }
 

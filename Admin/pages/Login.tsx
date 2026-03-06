@@ -5,6 +5,8 @@ interface LoginProps {
   onLogin: () => void;
 }
 
+const API_ROOT_URL = import.meta.env.VITE_API_BASE_URL?.replace(/\/auth$/, '') || 'http://localhost:4000/api';
+
 export const Login: React.FC<LoginProps> = ({ onLogin }) => {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
@@ -12,21 +14,36 @@ export const Login: React.FC<LoginProps> = ({ onLogin }) => {
   const [error, setError] = useState('');
   const [isLoading, setIsLoading] = useState(false);
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setError('');
     setIsLoading(true);
 
-    setTimeout(() => {
-      if (!email || !password) {
-        setError('Please fill in all fields.');
-      } else if (email === 'admin@hunarbazaar.com' && password === 'Admin123') {
+    try {
+      // Authenticate with backend admin-login endpoint
+      const response = await fetch(`${API_ROOT_URL}/auth/admin-login`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ email, password }),
+      });
+
+      const data = await response.json();
+
+      if (response.ok && data.token) {
+        localStorage.setItem('adminToken', data.token);
+        localStorage.setItem('adminEmail', email);
         onLogin();
       } else {
-        onLogin();
+        setError(data.message || 'Invalid credentials. Please try again.');
       }
+    } catch (err: any) {
+      console.error('Login error:', err);
+      setError('Failed to connect to server. Please check your connection.');
+    } finally {
       setIsLoading(false);
-    }, 800);
+    }
   };
 
   return (
@@ -50,7 +67,7 @@ export const Login: React.FC<LoginProps> = ({ onLogin }) => {
             Welcome Back!
           </h2>
           <p className="mt-2 text-center text-sm text-gray-600">
-            Enter your credentials to access the panel
+            Enter your credentials to access the admin panel
           </p>
         </div>
 
@@ -70,7 +87,8 @@ export const Login: React.FC<LoginProps> = ({ onLogin }) => {
               placeholder="admin@hunarbazaar.com"
               value={email}
               onChange={(e) => setEmail(e.target.value)}
-              className="appearance-none rounded-md block w-full px-3 py-2 border border-gray-300 bg-[#F3F8FF] placeholder-gray-500 text-gray-900 focus:outline-none focus:ring-brand-teal focus:border-brand-teal sm:text-sm"
+              disabled={isLoading}
+              className="appearance-none rounded-md block w-full px-3 py-2 border border-gray-300 bg-[#F3F8FF] placeholder-gray-500 text-gray-900 focus:outline-none focus:ring-brand-teal focus:border-brand-teal sm:text-sm disabled:opacity-50"
             />
           </div>
 
@@ -84,12 +102,14 @@ export const Login: React.FC<LoginProps> = ({ onLogin }) => {
               placeholder="••••••••"
               value={password}
               onChange={(e) => setPassword(e.target.value)}
-              className="appearance-none rounded-md block w-full px-3 py-2 border border-gray-300 bg-[#F3F8FF] placeholder-gray-500 text-gray-900 focus:outline-none focus:ring-brand-teal focus:border-brand-teal sm:text-sm"
+              disabled={isLoading}
+              className="appearance-none rounded-md block w-full px-3 py-2 border border-gray-300 bg-[#F3F8FF] placeholder-gray-500 text-gray-900 focus:outline-none focus:ring-brand-teal focus:border-brand-teal sm:text-sm disabled:opacity-50"
             />
             <button
               type="button"
               onClick={() => setShowPassword(!showPassword)}
-              className="absolute inset-y-0 right-0 pr-3 flex items-center text-gray-500"
+              disabled={isLoading}
+              className="absolute inset-y-0 right-0 pr-3 flex items-center text-gray-500 disabled:opacity-50"
             >
               {showPassword ? <EyeOff size={20} /> : <Eye size={20} />}
             </button>

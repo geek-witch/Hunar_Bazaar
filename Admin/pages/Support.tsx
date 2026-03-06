@@ -7,6 +7,7 @@ import { MessageCircle, Search, Send, Check, ArrowLeft } from "lucide-react"
 interface Ticket {
   id: string
   type: "dispute" | "query" | "complaint"
+  category: string
   title: string
   description: string
   attachment?: string | null
@@ -54,7 +55,11 @@ const Avatar = ({ image, initial, name }: { image?: string; initial: string; nam
 
 const API_ROOT_URL = import.meta.env.VITE_API_BASE_URL?.replace(/\/auth$/, '') || 'http://localhost:4000/api';
 
-export default function Support() {
+interface SupportPageProps {
+  onShowNotification?: (notification: { message: string }) => void;
+}
+
+export default function Support({ onShowNotification }: SupportPageProps) {
   const [selectedTicket, setSelectedTicket] = useState<string>("")
   const [activeTab, setActiveTab] = useState<string>("all")
   const [searchTerm, setSearchTerm] = useState("")
@@ -71,7 +76,7 @@ export default function Support() {
     const fetchIssues = async () => {
       try {
         setIsLoading(true)
-        const token = localStorage.getItem('token')
+        const token = localStorage.getItem('adminToken')
         const status = activeTab === 'all' ? undefined : activeTab
         const params = new URLSearchParams()
         if (status) params.append('status', status)
@@ -134,7 +139,7 @@ export default function Support() {
 
     const fetchComments = async () => {
       try {
-        const token = localStorage.getItem('token')
+        const token = localStorage.getItem('adminToken')
         const response = await fetch(`${API_ROOT_URL}/support/issues/${selectedTicket}/comments`, {
           method: 'GET',
           headers: {
@@ -193,7 +198,7 @@ export default function Support() {
 
     setIsSendingReply(true)
     try {
-      const token = localStorage.getItem('token')
+      const token = localStorage.getItem('adminToken')
       const response = await fetch(`${API_ROOT_URL}/support/issues/${selectedTicket}/comments`, {
         method: 'POST',
         headers: {
@@ -220,12 +225,19 @@ export default function Support() {
           }))
         }
         setReplyMessage("")
+        if (onShowNotification) {
+          onShowNotification({ message: 'Reply Sent Successfully' })
+        }
       } else {
-        alert(data.message || 'Failed to send reply')
+        if (onShowNotification) {
+          onShowNotification({ message: data.message || 'Failed to send reply' })
+        }
       }
     } catch (error) {
       console.error('Error sending reply:', error)
-      alert('Failed to send reply. Please try again.')
+      if (onShowNotification) {
+        onShowNotification({ message: 'Failed to send reply. Please try again.' })
+      }
     } finally {
       setIsSendingReply(false)
     }
@@ -235,7 +247,7 @@ export default function Support() {
     if (!selectedTicket) return
 
     try {
-      const token = localStorage.getItem('token')
+      const token = localStorage.getItem('adminToken')
       const response = await fetch(`${API_ROOT_URL}/support/issues/${selectedTicket}/status`, {
         method: 'PATCH',
         headers: {
@@ -252,12 +264,19 @@ export default function Support() {
           [selectedTicket]: "resolved",
         }))
         setTickets((prev) => prev.map((t) => (t.id === selectedTicket ? { ...t, status: "resolved" as const } : t)))
+        if (onShowNotification) {
+          onShowNotification({ message: 'Marked as Resolved Successfully' })
+        }
       } else {
-        alert(data.message || 'Failed to update status')
+        if (onShowNotification) {
+          onShowNotification({ message: data.message || 'Failed to update status' })
+        }
       }
     } catch (error) {
       console.error('Error updating status:', error)
-      alert('Failed to update status. Please try again.')
+      if (onShowNotification) {
+        onShowNotification({ message: 'Failed to update status. Please try again.' })
+      }
     }
   }
 
@@ -336,7 +355,7 @@ export default function Support() {
                   <div className="flex items-start justify-between mb-2">
                       
                     <span className={`text-xs font-bold px-2.5 py-1 rounded-full border ${getTypeColor(ticket.type)}`}>
-                      {ticket.type.toUpperCase()}
+                      {ticket.category || ticket.type.toUpperCase()}
                     </span>
                     <span className="text-xs text-gray-500">{ticket.date}</span>
                   </div>
@@ -377,7 +396,7 @@ export default function Support() {
                     <span
                       className={`text-xs font-bold px-2.5 py-1 rounded-full border ${getTypeColor(currentTicket.type)}`}
                     >
-                      {currentTicket.type.toUpperCase()}
+                      {currentTicket.category || currentTicket.type.toUpperCase()}
                     </span>
                     <span className="text-xs md:text-sm font-medium text-gray-600">
                       Ticket #{currentTicket.id.padStart(3, "0")}

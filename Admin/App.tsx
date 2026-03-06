@@ -5,17 +5,24 @@ import { Dashboard } from './pages/Dashboard';
 import { UsersPage } from './pages/Users';
 import { SubscriptionsPage } from './pages/Subscriptions';
 import SupportPage from './pages/Support';
+import Reports from './pages/Reports';
+import UserReports from './pages/UserReports';
 import { LogsPage } from './pages/Logs';
+import NotificationsPage from './pages/NotificationsPage';
 import { SubscriptionPlan, AppNotification } from './types';
 import { Notification } from './components/Notification';
+import { adminApi } from './utils/api';
 
-type View = 
+type View =
   | 'login'
   | 'dashboard'
   | 'users'
   | 'subscriptions'
   | 'support'
-  | 'logs';
+  | 'reports'
+  | 'user-reports'
+  | 'logs'
+  | 'notifications';
 
 const INITIAL_PLANS: SubscriptionPlan[] = [
   {
@@ -44,19 +51,25 @@ const INITIAL_PLANS: SubscriptionPlan[] = [
   }
 ];
 
-const MOCK_NOTIFICATIONS: AppNotification[] = [
-  { id: '1', title: 'New Dispute Raised', message: 'User Zainab Ali raised a dispute against Provider #55.', type: 'Dispute', time: '10 min ago', isRead: false },
-  { id: '2', title: 'Support Query', message: 'Usman Electric requested an account restriction appeal.', type: 'Query', time: '1 hour ago', isRead: false },
-  { id: '3', title: 'Subscription Update', message: 'Payment gateway maintenance scheduled for tonight.', type: 'System', time: '3 hours ago', isRead: false },
-  { id: '4', title: 'Dispute Resolved', message: 'The dispute between Ali and Provider #22 has been closed.', type: 'Dispute', time: '1 day ago', isRead: true },
-];
 
 const App: React.FC = () => {
   const [currentView, setCurrentView] = useState<View>('login');
   const [isAuthenticated, setIsAuthenticated] = useState(false);
-  const [plans, setPlans] = useState<SubscriptionPlan[]>(INITIAL_PLANS);
-  const [notification, setNotification] = useState<{message: string} | null>(null);
-  const [notifications, setNotifications] = useState<AppNotification[]>(MOCK_NOTIFICATIONS);
+  const [plans, setPlans] = useState<SubscriptionPlan[]>([]);
+  const [notification, setNotification] = useState<{ message: string } | null>(null);
+  const [notifications, setNotifications] = useState<AppNotification[]>([]);
+
+  // Check for existing token on mount
+  useEffect(() => {
+    const token = localStorage.getItem('adminToken');
+    if (token) {
+      setIsAuthenticated(true);
+      // Determine initial view from URL or default to dashboard
+      const params = new URLSearchParams(window.location.search);
+      const view = params.get('page') as View;
+      setCurrentView(view || 'dashboard');
+    }
+  }, []);
 
   // Handle Browser Navigation (Back/Forward)
   useEffect(() => {
@@ -78,14 +91,64 @@ const App: React.FC = () => {
     return () => window.removeEventListener('popstate', handlePopState);
   }, [isAuthenticated]);
 
-  // Initial Load - Check URL
+  // Fetch notifications when authenticated
   useEffect(() => {
-    const params = new URLSearchParams(window.location.search);
-    const view = params.get('page') as View;
-    if (view && isAuthenticated) {
-      setCurrentView(view);
-    }
+    const fetchNotifications = async () => {
+      if (!isAuthenticated) return;
+      try {
+        const resp = await adminApi.getNotifications();
+        if (resp.success) {
+          setNotifications(resp.data.map((n: any) => ({
+            id: n._id,
+            title: n.type.replace(/_/g, ' ').replace(/\b\w/g, c => c.toUpperCase()), // Basic formatting
+            message: n.message,
+            type: n.type, // Keep original type for backend use
+            time: new Date(n.createdAt).toLocaleString(),
+            isRead: n.isRead,
+          })).filter((n: any) => {
+            // Filter out user-specific notifications for Admin portal
+            const userTypes = ['friend_request', 'group_chat_new_message', 'session_request', 'feedback'];
+            const adminTypes = ['dispute', 'query', 'system', 'support', 'report', 'admin'];
+            // Check if type matches any admin type substring
+            const lowerType = n.type.toLowerCase();
+
+            // Allow if explicitly an admin type or doesn't start with known user prefixes if we want to be permissive
+            // But user request is "admin shouldn't get notifications for user side things"
+            // Using an allowlist approach based on Admin/pages/NotificationsPage.tsx icons + common admin tasks
+
+            return adminTypes.some(t => lowerType.includes(t));
+          }));
+        }
+      } catch (error) {
+        console.error('Failed to fetch notifications:', error);
+      }
+    };
+    fetchNotifications();
   }, [isAuthenticated]);
+
+  // Fetch plans
+  useEffect(() => {
+    const fetchPlans = async () => {
+      try {
+        const resp = await adminApi.getSubscriptions();
+        if (resp.success) {
+          // Format plans from DB to match SubscriptionPlan interface
+          const formattedPlans = resp.data.map((p: any) => ({
+            id: p._id,
+            name: p.name,
+            price: p.price,
+            currency: p.currency,
+            features: p.features,
+            type: p.type
+          }));
+          setPlans(formattedPlans);
+        }
+      } catch (error) {
+        console.error('Failed to fetch plans:', error);
+      }
+    };
+    fetchPlans();
+  }, []);
 
   const updateView = (view: View) => {
     setCurrentView(view);
@@ -101,6 +164,8 @@ const App: React.FC = () => {
   };
 
   const handleLogout = () => {
+    localStorage.removeItem('adminToken');
+    localStorage.removeItem('adminEmail');
     setIsAuthenticated(false);
     updateView('login');
     setNotification({ message: 'Logout Successfully' });
@@ -110,17 +175,45 @@ const App: React.FC = () => {
     setNotification(null);
   };
 
-  const markAllNotificationsRead = () => {
-    setNotifications(notifications.map(n => ({ ...n, isRead: true })));
+  const markAllNotificationsRead = async () => {
+    try {
+      await adminApi.markAllNotificationsAsRead();
+      setNotifications(notifications.map(n => ({ ...n, isRead: true })));
+    } catch (error) {
+      console.error('Failed to mark all notifications as read:', error);
+      setNotification({ message: 'Failed to mark all as read.' });
+    }
+  };
+
+  const markNotificationAsRead = async (id: string) => {
+    try {
+      await adminApi.markNotificationAsRead(id);
+      setNotifications(notifications.map(n =>
+        n.id === id ? { ...n, isRead: true } : n
+      ));
+    } catch (error) {
+      console.error(`Failed to mark notification ${id} as read:`, error);
+      setNotification({ message: 'Failed to mark notification as read.' });
+    }
+  };
+
+  const deleteNotification = async (id: string) => {
+    try {
+      await adminApi.deleteNotification(id);
+      setNotifications(notifications.filter(n => n.id !== id));
+    } catch (error) {
+      console.error(`Failed to delete notification ${id}:`, error);
+      setNotification({ message: 'Failed to delete notification.' });
+    }
   };
 
   if (!isAuthenticated) {
     return (
       <>
         {notification && (
-          <Notification 
-            message={notification.message} 
-            onClose={closeNotification} 
+          <Notification
+            message={notification.message}
+            onClose={closeNotification}
           />
         )}
 
@@ -134,8 +227,18 @@ const App: React.FC = () => {
       case 'dashboard': return <Dashboard />;
       case 'users': return <UsersPage plans={plans} />;
       case 'subscriptions': return <SubscriptionsPage plans={plans} onUpdatePlans={setPlans} />;
-      case 'support': return <SupportPage />;
+      case 'support': return <SupportPage onShowNotification={setNotification} />;
+      case 'reports': return <Reports onShowNotification={setNotification} />;
+      case 'user-reports': return <UserReports onShowNotification={setNotification} />;
       case 'logs': return <LogsPage />;
+      case 'notifications': return (
+        <NotificationsPage
+          notifications={notifications}
+          onMarkAsRead={markNotificationAsRead}
+          onMarkAllAsRead={markAllNotificationsRead}
+          onDeleteNotification={deleteNotification}
+        />
+      );
       default: return <Dashboard />;
     }
   };
@@ -143,13 +246,13 @@ const App: React.FC = () => {
   return (
     <>
       {notification && (
-        <Notification 
-          message={notification.message} 
-          onClose={closeNotification} 
+        <Notification
+          message={notification.message}
+          onClose={closeNotification}
         />
       )}
-      <Layout 
-        activePage={currentView} 
+      <Layout
+        activePage={currentView}
         onNavigate={(page) => updateView(page as View)}
         onLogout={handleLogout}
         notifications={notifications}

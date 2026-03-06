@@ -1,9 +1,8 @@
 import React, { useState, useEffect } from 'react';
 import { 
-  LayoutDashboard, Users, CreditCard, MessageCircle, FileText, Menu, Bell
+  LayoutDashboard, Users, CreditCard, MessageCircle, AlertCircle, FileText, Menu, Bell
 } from 'lucide-react';
 import { AppNotification } from '../types';
-import { NotificationsPanel } from './NotificationsPanel';
 
 interface LayoutProps {
   children: React.ReactNode;
@@ -18,7 +17,6 @@ export const Layout: React.FC<LayoutProps> = ({
   children, activePage, onNavigate, onLogout, notifications, onMarkAllRead 
 }) => {
   const [isSidebarOpen, setIsSidebarOpen] = useState(false);
-  const [isNotifPanelOpen, setIsNotifPanelOpen] = useState(false);
 
   const unreadCount = notifications.filter(n => !n.isRead).length;
 
@@ -27,6 +25,7 @@ export const Layout: React.FC<LayoutProps> = ({
     { id: 'users', label: 'Users', icon: Users },
     { id: 'subscriptions', label: 'Subscriptions', icon: CreditCard },
     { id: 'support', label: 'Support & Disputes', icon: MessageCircle },
+    { id: 'user-reports', label: 'User Reports', icon: AlertCircle },
     { id: 'logs', label: 'System Logs', icon: FileText },
   ];
 
@@ -35,9 +34,9 @@ export const Layout: React.FC<LayoutProps> = ({
     setIsSidebarOpen(false);
   };
 
-  // Lock body scroll when sidebar or notification panel is open
+  // Lock body scroll when sidebar is open
   useEffect(() => {
-    if (isSidebarOpen || isNotifPanelOpen) {
+    if (isSidebarOpen) {
       document.body.style.overflow = 'hidden';
     } else {
       document.body.style.overflow = 'unset';
@@ -45,7 +44,7 @@ export const Layout: React.FC<LayoutProps> = ({
     return () => {
       document.body.style.overflow = 'unset';
     };
-  }, [isSidebarOpen, isNotifPanelOpen]);
+  }, [isSidebarOpen]);
 
   return (
     <div className="h-screen bg-[#0E4B5B] flex flex-col overflow-hidden">
@@ -72,7 +71,7 @@ export const Layout: React.FC<LayoutProps> = ({
         <div className="flex items-center gap-4 sm:gap-6">
           {/* Notification Bell */}
           <button 
-            onClick={() => setIsNotifPanelOpen(true)}
+            onClick={() => onNavigate('notifications')}
             className="relative p-2 text-[#0E4B5B] hover:bg-blue-200 rounded-full transition-colors"
           >
             <Bell size={24} />
@@ -146,15 +145,6 @@ export const Layout: React.FC<LayoutProps> = ({
       <footer className="flex-none h-12 bg-[#E6EEF9] border-t border-blue-200 z-30 flex items-center justify-center text-xs font-medium text-[#0E4B5B] shadow-[0_-4px_6px_-1px_rgba(0,0,0,0.1)]">
         <p>© 2025 Hunar Bazaar. All rights reserved.</p>
       </footer>
-
-      {/* Notification Panel */}
-      {isNotifPanelOpen && (
-        <NotificationsPanel 
-          notifications={notifications}
-          onClose={() => setIsNotifPanelOpen(false)}
-          onMarkAllRead={onMarkAllRead}
-        />
-      )}
     </div>
   );
 };
