@@ -11,17 +11,16 @@ interface SearchSkillsModalProps {
   isOpen: boolean
   onClose: () => void
   navigation: Navigation
+  query: string
 }
 
-const SearchSkillsModal: React.FC<SearchSkillsModalProps> = ({ isOpen, onClose, navigation }) => {
-  const [searchQuery, setSearchQuery] = useState("")
+const SearchSkillsModal: React.FC<SearchSkillsModalProps> = ({ isOpen, onClose, navigation, query }) => {
   const [searchResults, setSearchResults] = useState<BrowseSkillResult[]>([])
   const [isLoading, setIsLoading] = useState(false)
   const [errorMessage, setErrorMessage] = useState("")
 
   useEffect(() => {
     if (!isOpen) {
-      setSearchQuery("")
       setSearchResults([])
       setErrorMessage("")
       setIsLoading(false)
@@ -31,7 +30,7 @@ const SearchSkillsModal: React.FC<SearchSkillsModalProps> = ({ isOpen, onClose, 
   useEffect(() => {
     if (!isOpen) return
 
-    const trimmedQuery = searchQuery.trim()
+    const trimmedQuery = query.trim()
     if (!trimmedQuery) {
       setSearchResults([])
       setErrorMessage("")
@@ -70,7 +69,7 @@ const SearchSkillsModal: React.FC<SearchSkillsModalProps> = ({ isOpen, onClose, 
       isCancelled = true
       clearTimeout(timeoutId)
     }
-  }, [searchQuery, isOpen])
+  }, [query, isOpen])
 
   const handleUserSelect = (profileId: string, userId?: string) => {
     sessionStorage.setItem("selectedProfileId", profileId)
@@ -84,92 +83,54 @@ const SearchSkillsModal: React.FC<SearchSkillsModalProps> = ({ isOpen, onClose, 
   if (!isOpen) return null
 
   return (
-    <>
-      {/* Backdrop */}
-      <div className="fixed inset-0 bg-black/50 z-40" onClick={onClose}></div>
-
-      {/* Modal */}
-      <div className="fixed inset-0 z-50 flex items-start justify-center pt-20 px-4">
-        <div className="bg-white rounded-lg shadow-2xl w-full max-w-2xl max-h-[70vh] overflow-hidden flex flex-col">
-          {/* Header */}
-          <div className="flex items-center justify-between p-4 border-b bg-brand-light-blue">
-            <h2 className="text-lg font-semibold text-brand-teal">Search Skills & Users</h2>
-            <button onClick={onClose} className="text-gray-500 hover:text-gray-700" aria-label="Close search">
-              <CloseIcon className="w-6 h-6" />
-            </button>
+    <div className="absolute top-full left-0 mt-2 w-80 bg-white rounded-xl shadow-xl overflow-hidden z-50 border border-gray-100">
+      {/* Results Only */}
+      <div className="overflow-y-auto max-h-[60vh] p-2">
+        {query.trim() === "" ? (
+          <div className="p-4 text-center text-gray-400 text-sm">
+            <p>Type to search skills & tutors...</p>
           </div>
-
-          {/* Search Input */}
-          <div className="p-4 border-b">
-            <div className="relative">
-              <input
-                type="text"
-                placeholder="Search for skills or tutors..."
-                value={searchQuery}
-                onChange={(e) => setSearchQuery(e.target.value)}
-                autoFocus
-                className="w-full bg-gray-50 text-gray-800 rounded-lg py-3 pl-10 pr-4 border border-gray-300 focus:outline-none focus:ring-2 focus:ring-brand-teal focus:border-transparent"
-              />
-              <SearchIcon className="w-5 h-5 text-gray-400 absolute left-3 top-1/2 -translate-y-1/2" />
-            </div>
+        ) : isLoading ? (
+          <div className="p-4 text-center text-gray-400 text-sm">
+            <p>Searching...</p>
           </div>
-
-          {/* Results */}
-          <div className="overflow-y-auto flex-1">
-            {searchQuery.trim() === "" ? (
-              <div className="p-8 text-center text-gray-500">
-                <p>Start typing to search for skills or tutors...</p>
-              </div>
-            ) : isLoading ? (
-              <div className="p-8 text-center text-gray-500">
-                <p>Searching for "{searchQuery}"...</p>
-              </div>
-            ) : errorMessage ? (
-              <div className="p-8 text-center text-red-500">
-                <p>{errorMessage}</p>
-              </div>
-            ) : searchResults.length === 0 ? (
-              <div className="p-8 text-center text-gray-500">
-                <p>No results found for "{searchQuery}"</p>
-              </div>
-            ) : (
-              <div className="divide-y">
-                {searchResults.map((result) => (
-                  <div
-                    key={result.id}
-                    onClick={() => handleUserSelect(result.profileId || result.id, result.id)}
-                    className="p-4 hover:bg-gray-50 cursor-pointer transition-colors flex items-center gap-4"
-                  >
-                    <img
-                      src={result.profilePic || "/asset/user1.jpg"}
-                      alt={result.name}
-                      className="w-12 h-12 rounded-full object-cover"
-                    />
-                    <div className="flex-1">
-                      <h3 className="font-semibold text-gray-800">{result.name}</h3>
-                      <p className="text-sm text-gray-600">
-                        Teaches:{" "}
-                        {result.teachSkills && result.teachSkills.length > 0
-                          ? result.teachSkills.slice(0, 3).join(", ")
-                          : "N/A"}
-                      </p>
-                      {result.learnSkills && result.learnSkills.length > 0 && (
-                        <p className="text-xs text-gray-500 mt-1">
-                          Learning: {result.learnSkills.slice(0, 2).join(", ")}
-                        </p>
-                      )}
-                    </div>
-                    <button className="bg-brand-teal/10 text-brand-teal px-3 py-1.5 rounded-full text-sm font-medium hover:bg-brand-teal/20 transition-colors">
-                      View
-                    </button>
-                  </div>
-                ))}
-              </div>
-            )}
+        ) : errorMessage ? (
+          <div className="p-4 text-center text-red-500 text-sm">
+            <p>{errorMessage}</p>
           </div>
-        </div>
+        ) : searchResults.length === 0 ? (
+          <div className="p-4 text-center text-gray-500 text-sm">
+            <p>No matches for "{query}"</p>
+          </div>
+        ) : (
+          <div className="space-y-1">
+            {searchResults.map((result) => (
+              <div
+                key={result.id}
+                onClick={() => handleUserSelect(result.profileId || result.id, result.id)}
+                className="p-2 hover:bg-brand-light-blue/30 cursor-pointer transition-colors flex items-center gap-3 rounded-lg"
+              >
+                <img
+                  src={result.profilePic || "/asset/user1.jpg"}
+                  alt={result.name}
+                  className="w-8 h-8 rounded-full object-cover border border-gray-200"
+                />
+                <div className="flex-1 min-w-0">
+                  <h3 className="font-semibold text-gray-800 text-sm truncate">{result.name}</h3>
+                  <p className="text-xs text-gray-500 truncate">
+                    <span className="text-brand-teal font-medium">
+                      {result.teachSkills && result.teachSkills.length > 0
+                        ? result.teachSkills.slice(0, 2).join(", ")
+                        : "N/A"}
+                    </span>
+                  </p>
+                </div>
+              </div>
+            ))}
+          </div>
+        )}
       </div>
-    </>
+    </div>
   )
 }
 
