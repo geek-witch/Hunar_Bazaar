@@ -1,55 +1,92 @@
 "use client"
 
 import type React from "react"
-import { useState } from "react"
-import { Page, type Navigation } from "../App"
+import { useEffect, useState } from "react"
+import type { Navigation } from "../App"
 import { CheckCircleIcon } from "../components/icons/MiscIcons"
+import { subscriptionApi } from "../utils/api"
+import { loadStripe } from "@stripe/stripe-js"
+
+const stripePublishableKey = import.meta.env.VITE_STRIPE_PUBLISHABLE_KEY as string | undefined
+const stripePromise = stripePublishableKey ? loadStripe(stripePublishableKey) : null
 
 type Plan = "Premium" | "Professional"
 
-const CheckoutPage: React.FC<{ navigation: Navigation; plan?: Plan }> = ({ navigation, plan = "Premium" }) => {
-  const [paymentMethod, setPaymentMethod] = useState<"card" | "paypal">("card")
+const CheckoutPage: React.FC<{ navigation: Navigation; plan?: Plan }> = ({ navigation }) => {
   const [isProcessing, setIsProcessing] = useState(false)
+  const [selectedPlan, setSelectedPlan] = useState<any>(null)
+  const [isLoading, setIsLoading] = useState(true)
 
-  const planDetails = {
-    Premium: {
-      name: "Premium",
-      price: 1000,
-      description: "For dedicated learners & teachers",
-      features: ["Unlimited skill exchanges", "Advanced profile analytics", "AI support", "Reminders Option"],
-    },
-    Professional: {
-      name: "Professional",
-      price: 2500,
-      description: "For power users & companies",
-      features: [
-        "Everything in Premium",
-        "Access for all Employees",
-        "Access to exclusive workshops",
-        "Customized AI features",
-      ],
-    },
-  }
+  useEffect(() => {
+    const fetchPlanDetails = async () => {
+      try {
+        const planType = sessionStorage.getItem('selectedPlan') || 'Premium'
+        const response = await subscriptionApi.getPlans()
+        if (response.success && Array.isArray(response.data)) {
+          const plan = response.data.find((p: any) => p.type === planType)
+          if (plan) {
+            setSelectedPlan(plan)
+          } else {
+            // Fallback or error
+            setSelectedPlan(response.data.find((p: any) => p.type === 'Premium'))
+          }
+        }
+      } catch (error) {
+        console.error('Error fetching plan details:', error)
+      } finally {
+        setIsLoading(false)
+      }
+    }
 
-  const selectedPlan = planDetails[plan]
+    fetchPlanDetails()
+  }, [])
 
-  const handlePayment = async () => {
+  const handleProceed = async () => {
+    if (!selectedPlan) return
+
     setIsProcessing(true)
     try {
-      // Simulate payment processing
-      await new Promise((resolve) => setTimeout(resolve, 2000))
+      if (!stripePromise || !stripePublishableKey) {
+        console.error("Stripe publishable key is not configured")
+        navigation.showNotification("Payment configuration error. Please contact support.")
+        return
+      }
 
-      // Save subscription to localStorage
-      localStorage.setItem("userPlan", plan)
-      localStorage.setItem("subscriptionDate", new Date().toISOString())
+      // Keep plan selection persisted (already used elsewhere)
+      if (selectedPlan?.type) {
+        sessionStorage.setItem("selectedPlan", String(selectedPlan.type))
+      }
 
-      alert(`Successfully upgraded to ${plan} plan!`)
-      navigation.navigateTo(Page.Home)
+      const response = await subscriptionApi.createCheckoutSession(selectedPlan._id)
+      if (!response.success || !(response as any).sessionId) {
+        navigation.showNotification(response.message || "Failed to start payment. Please try again.")
+        return
+      }
+
+      const stripe = await stripePromise
+      if (!stripe) {
+        navigation.showNotification("Stripe failed to initialize. Please refresh and try again.")
+        return
+      }
+
+      const { error } = await stripe.redirectToCheckout({ sessionId: (response as any).sessionId })
+      if (error) {
+        console.error("Stripe redirect error:", error)
+        navigation.showNotification(error.message || "Payment redirect failed. Please try again.")
+      }
     } catch (error) {
-      alert("Payment failed. Please try again.")
+      navigation.showNotification("Payment Failed. Please Try Again.")
     } finally {
       setIsProcessing(false)
     }
+  }
+
+  if (isLoading) {
+    return <div className="min-h-screen bg-brand-light-blue flex items-center justify-center text-gray-500">Loading plan details...</div>
+  }
+
+  if (!selectedPlan) {
+    return <div className="min-h-screen bg-brand-light-blue flex items-center justify-center text-gray-500">Plan not found.</div>
   }
 
   return (
@@ -57,8 +94,9 @@ const CheckoutPage: React.FC<{ navigation: Navigation; plan?: Plan }> = ({ navig
       <div className="container mx-auto px-4 max-w-4xl">
         {/* Header */}
         <div className="mb-8">
-        
-          <h1 className="text-4xl font-bold text-brand-teal">Complete Your Purchase</h1>
+
+          <h1 className="text-4xl font-bold text-brand-teal">Checkout</h1>
+          <p className="text-gray-600 mt-2">Review your plan and proceed to pay.</p>
         </div>
 
         <div className="grid md:grid-cols-3 gap-8">
@@ -100,145 +138,20 @@ const CheckoutPage: React.FC<{ navigation: Navigation; plan?: Plan }> = ({ navig
             </div>
           </div>
 
-          {/* Payment Form */}
+          {/* Proceed */}
           <div className="md:col-span-2">
             <div className="bg-white p-8 rounded-xl shadow-lg">
-              <h2 className="text-xl font-bold text-brand-teal mb-6">Payment Information</h2>
+              <h2 className="text-xl font-bold text-brand-teal mb-3">Pay securely with card</h2>
+              <p className="text-gray-600 mb-8">You’ll be redirected to Stripe Checkout to enter your card details.</p>
 
-              {/* Payment Method Selection */}
-              <div className="mb-8">
-                <h3 className="text-sm font-semibold text-gray-700 mb-4">Select Payment Method</h3>
-                <div className="space-y-3">
-                  <label
-                    className="flex items-center p-4 border-2 rounded-lg cursor-pointer transition-all"
-                    style={{ borderColor: paymentMethod === "card" ? "#1a5f7a" : "#e5e7eb" }}
-                  >
-                    <input
-                      type="radio"
-                      name="payment"
-                      value="card"
-                      checked={paymentMethod === "card"}
-                      onChange={(e) => setPaymentMethod(e.target.value as "card")}
-                      className="w-4 h-4"
-                    />
-                    <span className="ml-3 font-medium text-gray-800">Credit/Debit Card</span>
-                  </label>
-                  <label className="flex items-center p-4 border-2 border-gray-200 rounded-lg cursor-pointer hover:border-gray-300 transition-all">
-                    <input
-                      type="radio"
-                      name="payment"
-                      value="paypal"
-                      checked={paymentMethod === "paypal"}
-                      onChange={(e) => setPaymentMethod(e.target.value as "paypal")}
-                      className="w-4 h-4"
-                    />
-                    <span className="ml-3 font-medium text-gray-800">PayPal</span>
-                  </label>
-                </div>
-              </div>
-
-              {/* Card Payment Form */}
-              {paymentMethod === "card" && (
-                <div className="space-y-4 mb-8">
-                  <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-2">Cardholder Name</label>
-                    <input
-                      type="text"
-                      placeholder="Issa Ali"
-                      className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-brand-teal"
-                    />
-                  </div>
-                  <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-2">Card Number</label>
-                    <input
-                      type="text"
-                      placeholder="4532 1234 5678 9010"
-                      className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-brand-teal"
-                    />
-                  </div>
-                  <div className="grid grid-cols-2 gap-4">
-                    <div>
-                      <label className="block text-sm font-medium text-gray-700 mb-2">Expiry Date</label>
-                      <input
-                        type="text"
-                        placeholder="MM/YY"
-                        className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-brand-teal"
-                      />
-                    </div>
-                    <div>
-                      <label className="block text-sm font-medium text-gray-700 mb-2">CVV</label>
-                      <input
-                        type="text"
-                        placeholder="123"
-                        className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-brand-teal"
-                      />
-                    </div>
-                  </div>
-                </div>
-              )}
-
-              {/* PayPal Notice */}
-              {paymentMethod === "paypal" && (
-                <div className="bg-blue-50 p-4 rounded-lg mb-8 border border-blue-200">
-                  <p className="text-sm text-blue-800">
-                    You will be redirected to PayPal to complete your payment securely.
-                  </p>
-                </div>
-              )}
-
-              {/* Billing Address */}
-              <div className="mb-8 pb-8 border-b">
-                <h3 className="text-sm font-semibold text-gray-700 mb-4">Billing Address</h3>
-                <div className="space-y-4">
-                  <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-2">Email</label>
-                    <input
-                      type="email"
-                      placeholder="Ali@example.com"
-                      className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-brand-teal"
-                    />
-                  </div>
-                  <div className="grid grid-cols-2 gap-4">
-                    <input
-                      type="text"
-                      placeholder="City"
-                      className="px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-brand-teal"
-                    />
-                    <input
-                      type="text"
-                      placeholder="Country"
-                      className="px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-brand-teal"
-                    />
-                  </div>
-                </div>
-              </div>
-
-              {/* Terms and Conditions */}
-              <div className="mb-8">
-                <label className="flex items-start gap-3 cursor-pointer">
-                  <input type="checkbox" className="w-4 h-4 mt-1" defaultChecked />
-                  <span className="text-sm text-gray-700">
-                    I agree to the{" "}
-                    <a href="#" className="text-brand-teal hover:underline">
-                      Terms & Conditions
-                    </a>{" "}
-                    and{" "}
-                    <a href="#" className="text-brand-teal hover:underline">
-                      Privacy Policy
-                    </a>
-                  </span>
-                </label>
-              </div>
-
-              {/* Submit Button */}
               <button
-                onClick={handlePayment}
+                onClick={handleProceed}
                 disabled={isProcessing}
                 className={`w-full py-3 rounded-lg font-semibold text-white transition-all ${
                   isProcessing ? "bg-gray-400 cursor-not-allowed" : "bg-brand-teal hover:bg-brand-teal-dark"
                 }`}
               >
-                {isProcessing ? "Processing Payment..." : `Pay PKR ${selectedPlan.price}/month`}
+                {isProcessing ? "Redirecting to payment..." : `Proceed to pay PKR ${selectedPlan.price}/month`}
               </button>
             </div>
           </div>
