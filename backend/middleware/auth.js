@@ -4,7 +4,7 @@ const User = require('../models/User');
 exports.authenticate = async (req, res, next) => {
   try {
     const authHeader = req.headers.authorization;
-    
+
     if (!authHeader || !authHeader.startsWith('Bearer ')) {
       return res.status(401).json({
         success: false,
@@ -12,10 +12,22 @@ exports.authenticate = async (req, res, next) => {
       });
     }
 
-    const token = authHeader.substring(7); 
+    const token = authHeader.substring(7);
 
     const decoded = jwt.verify(token, process.env.JWT_SECRET);
 
+    // Handle admin tokens
+    if (decoded.isAdmin) {
+      req.user = {
+        _id: decoded.userId,
+        isAdmin: true,
+        email: decoded.email
+      };
+      next();
+      return;
+    }
+
+    // Handle regular user tokens
     const user = await User.findById(decoded.userId).select('-password');
     if (!user) {
       return res.status(401).json({
@@ -50,13 +62,13 @@ exports.authenticate = async (req, res, next) => {
 exports.optionalAuthenticate = async (req, res, next) => {
   try {
     const authHeader = req.headers.authorization;
-    
+
     if (!authHeader || !authHeader.startsWith('Bearer ')) {
       return next();
     }
 
     const token = authHeader.substring(7);
-    
+
     try {
       const decoded = jwt.verify(token, process.env.JWT_SECRET);
       const user = await User.findById(decoded.userId).select('-password');
@@ -66,10 +78,21 @@ exports.optionalAuthenticate = async (req, res, next) => {
     } catch (error) {
 
     }
-    
+
     next();
   } catch (error) {
     next();
+  }
+};
+
+exports.authorizeAdmin = (req, res, next) => {
+  if (req.user && req.user.isAdmin) {
+    next();
+  } else {
+    res.status(403).json({
+      success: false,
+      message: 'Forbidden. Admin access required.'
+    });
   }
 };
 
